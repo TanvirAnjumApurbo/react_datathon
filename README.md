@@ -10,16 +10,46 @@ here exists only to confirm the split behaves and to rank the feature blocks.
 
 ## Leaderboard status
 
-| submission | local `primary_62d` AP | public LB |
-|---|---|---|
-| 1 (2026-09-06) | 0.7252 | **0.52708** |
+| submission | what changed | local `tail_late` | Δ local | public LB | Δ LB |
+|---|---|---|---|---|---|
+| 1 (2026-09-06) | 201 features, hill-climb blend | 0.516 | — | 0.52708 | — |
+| 2 (2026-09-07) | 243 features, 7-day encoder delay, 5-config average | 0.5507 | +0.035 | **0.54151** | **+0.014** |
+| 3 (2026-09-07) | + 8 recency/window variants (13 members) | 0.5530 | +0.0023 | 0.53901 | **−0.0025** |
+| 4 (2026-09-07) | submission 2 + `signup_inconsistency_d` | ~+0.025 | +0.025 | **0.54874** | **+0.0072** |
+| 5 (2026-09-07) | submission 4 + `cat_base` | — | +0.0011 | **0.55014** | **+0.0014** |
 
-The gap is understood and is not a leak: the fraud amount signature decays
-across the stream (fraud median 4,918 BDT in January, 944 in mid-July, while the
-legitimate median holds at ~485), so the last two labelled weeks score ~0.53
-locally -- matching the leaderboard -- while the six-week fold average hides it.
-Full analysis, per-week numbers and the plan for the remaining submissions are
-in **[SUBMISSIONS.md](SUBMISSIONS.md)**, which is the running decision log.
+Submission 1's gap was understood and was not a leak: the fraud amount signature
+decays across the stream (fraud median 4,918 BDT in January, 944 in mid-July,
+while the legitimate median holds at ~485), so the last two labelled weeks score
+~0.53 locally -- matching the leaderboard -- while the six-week fold average
+hides it. `primary_62d` was demoted for exactly this reason and `tail_late`
+became the selection target.
+
+**Four points give the calibration, and it has a threshold in it:**
+
+* **Large local gains pass through at roughly 30–40%.** +0.035 local → +0.014
+  board; +0.025 local → +0.0072 board.
+* **Small local gains do not pass through at all — they are not even correctly
+  signed.** Submission 3 gained +0.0023 on `tail_late` and *lost* 0.0025 on the
+  board.
+
+So `tail_late` is a sound proxy for changes worth roughly 0.008 AP or more, and
+has **no resolving power at all** below that. This is stronger than a noise-floor
+argument: a sub-0.005 local delta is not a small board gain, it is a coin flip.
+Sixty-seven thousand rows and 1,068 positives cannot separate models that close,
+and no amount of bootstrapping fixes it. Everything Stage 2 measured lives below
+that threshold.
+
+Submissions 3 and 5 make the point precisely. Both add members to a blend, both
+have local deltas well under the limit, and they go opposite ways: eight
+LightGBM variants that differ only in sample weights gained +0.0023 locally and
+**lost** 0.0025 on the board; one CatBoost gained +0.0011 locally and **gained**
+0.0014. What separates them is not the size of the local number but whether the
+added members make *independent* errors. Add members for decorrelation, not for
+count.
+
+Full analysis, per-week numbers and the plan for the remaining submissions are in
+**[SUBMISSIONS.md](SUBMISSIONS.md)**, which is the running decision log.
 
 ## Quick start
 
@@ -29,32 +59,88 @@ python -m venv .venv
 
 python build_features.py --check     # build everything + prove past-only
 python train_check.py                # walk-forward feature validation
-python train_model.py --stage all    # config search -> blend -> submission.csv
+
+python tune.py --set all --far       # Stage 2: which fitting procedure?
+python blend.py                      # Stage 3: which weights, which post-process?
+python submit.py --name my_run --seeds 2 --note "what this is spent to learn"
 ```
 
+Before trusting any modelling number, run the diagnostics:
+
+```bash
+python baseline.py                   # raw-column reference AP -- the denominator
+python adversarial_validation.py     # how different is test from train, and where
+python ablate.py --set all           # does a feature change survive a paired test
+```
+
+The division of labour: `ablate.py` varies the **feature matrix**, `tune.py`
+varies the **fitting procedure**, and both judge on `tail_late` with
+`tail_recent` as confirmation and a paired bootstrap in place of a point
+estimate. `submit.py` caches each member's seed-averaged test ranking, so a
+second blend built from members already fitted costs seconds rather than another
+refit — which is what makes it affordable to answer several questions in one
+sitting.
+
 Outputs land in `data/processed/`: `train_features.parquet`,
-`test_features.parquet`, `feature_manifest.json`. The submission is written to
-`submission.csv` at the repo root.
+`test_features.parquet`, `feature_manifest.json`, plus `baseline_results.csv`,
+`adversarial_features.csv`, `ablation_results.csv`, `tune_results.csv` and
+`postprocess_results.csv`. Submissions are written to `submissions/<name>.csv`
+with a `<name>.json` recording exactly what produced each one.
+
+The label-free feature cache invalidates itself: `harness.load_base` keys it on
+a hash of the feature-module sources, so editing a module rebuilds rather than
+silently reusing the previous feature set.
 
 ## Results
 
-201 features. LightGBM, expanding-window folds, target encoder rebuilt per fold:
+243 features across seven blocks (`temporal` 21, `amount` 40, `velocity` 57,
+`entity` 55, `behaviour` 28, `encoding` 13, `graph` 29). LightGBM,
+expanding-window folds, target encoder rebuilt per fold with a 7-day feedback
+delay:
 
-| fold | horizon | val AP | vs base rate |
-|---|---|---|---|
-| `primary_62d` | 62 d | 0.717 | 42.7× |
-| `wf_mar` | 30 d | 0.803 | 42.0× |
-| `wf_apr` | 30 d | 0.761 | 43.9× |
-| `wf_may` | 30 d | 0.778 | 46.7× |
+| fold | horizon | val AP | vs base rate | train AP |
+|---|---|---|---|---|
+| **`tail_late`** | 17 d (46–62 ahead) | **0.5494** | 34.6× | 0.900 |
+| `tail_recent` | 17 d (1–17 ahead) | 0.5611 | 35.3× | 0.881 |
+| `primary_62d` | 62 d | 0.7340 | 43.7× | 0.903 |
+| `wf_mar` | 30 d | 0.8177 | 42.8× | 0.935 |
+| `wf_apr` | 30 d | 0.7903 | 45.6× | 0.961 |
+| `wf_may` | 30 d | 0.7967 | 47.8× | 0.935 |
 
-mean **0.765**, std 0.036. `primary_62d` is the fold to trust — it is the only
-one that reproduces the real train→test geometry (a 62-day forward block
-starting the day after the cutoff). The others measure stability.
+*(Measured before the stopping-window fix described below; re-running the same
+single model afterwards gives `tail_late` 0.5509 / `tail_recent` 0.5593 /
+`primary_62d` 0.7351, a change of 0.0002 on the selection fold. The walk-forward
+rows have not been re-run.)*
 
-Gain by block: amount 47.2%, velocity 26.6%, entity 12.5%, encoding 6.8%,
-graph 3.7%, temporal 3.2%.
+**Do not average this column.** The six windows sit in two different fraud
+regimes, and the mean (0.708) is the exact statistic that produced a 0.20
+surprise on submission 1. `tail_late` is the number to read: it is the slice
+that has tracked the leaderboard — 0.516 local against 0.527 public on the
+previous feature set, 0.5507 against 0.54151 on this one. The rest measure
+stability and horizon decay.
+
+The spread is itself the finding: the same model scores 0.82 on March and 0.55
+on the last two labelled weeks. That is not overfitting — train AP is roughly
+flat at 0.88–0.96 across all six — it is the target moving.
+
+Gain by block: amount 48.6%, velocity 27.4%, entity 13.1%, graph 3.4%,
+temporal 2.9%, behaviour 2.4%, encoding 2.4%.
+
+Gain share and marginal value are not the same thing, and the gap is
+instructive. `encoding` carries 2.4% of gain, but removing its **feedback
+delay** costs 0.008–0.028 AP on every window. `behaviour` also carries 2.4%,
+and removing it entirely costs nothing measurable. Gain says how often a tree
+split on something; the ablation says whether the model would miss it.
 
 ## Modelling
+
+> **Superseded by Stage 2.** Everything in this section was measured on
+> `primary_62d` with the 201-column feature set, and three of its conclusions
+> have since been overturned on the tail folds: the config ranking, the
+> exclusion of XGBoost and CatBoost, and the preference for a hill-climbed
+> blend. It is kept because the submission-1 numbers came from here and because
+> two of the reversals are instructive. Current numbers are under
+> **[Stage 2](#stage-2--tuning-the-fitting-procedure-not-the-features)**.
 
 Config search on `primary_62d` (`train_model.py --stage search`):
 
@@ -88,19 +174,27 @@ Two things worth knowing:
   because both non-LightGBM families sit clearly lower and drag the average
   down. Blend weights are therefore chosen by greedy hill-climb (Caruana-style,
   with replacement) on the primary fold, so a member that hurts simply never
-  gets selected — which is exactly what happened to xgb and cat. `--stage blend`
-  prints the comparison against best-single and equal-weight baselines before
-  committing, so the choice is visible rather than assumed.
+  gets selected — which is exactly what happened to xgb and cat.
+
+  > **Overturned.** On 243 features, `cat_base` is the best single model in the
+  > project (0.7375 on this same fold, against the 0.7239 the exclusion was
+  > written about) and equal-weighting all three families is a statistical tie
+  > with LightGBM-only. The exclusion was correct about the models it measured
+  > and wrong to be carried forward as a rule. And the hill-climb itself is now
+  > rejected: it fits its weights on the rows the paired bootstrap resamples,
+  > so the interval it reports cannot see its own selection bias.
 - **Recency weighting does not pay.** Half-lives of 90 d and 45 d land within
   0.0006 AP of the unweighted model, so the drift in this data is not the kind
   that down-weighting old rows fixes. It does cut the round count roughly in
   half, which is a speed argument, not an accuracy one.
 
-  > **Superseded by submission 1.** This was measured on `primary_62d`, whose
-  > 62-day window is six weeks of one fraud-amount regime plus two weeks of the
-  > next -- an average that cannot see drift adaptation working. Re-measure
-  > against the 2026-06-29 -> 07-15 tail window before relying on it. See
-  > [SUBMISSIONS.md](SUBMISSIONS.md).
+  > **Re-measured, and it holds.** The objection was that `primary_62d` averages
+  > six weeks of one fraud-amount regime with two of the next and structurally
+  > cannot see drift adaptation working. Re-run on `tail_recent`, whose training
+  > data ends *inside* the new regime, across half-lives of 7/14/21/45/90 days
+  > and hard windows of 45/90/120 days: **not one clears the noise floor.** The
+  > right verdict for the wrong reason, and now for the right one. See
+  > [Stage 2](#recency-weighting-does-not-pay-and-now-we-know-why).
 
 The spread across all five LightGBM configs is 0.005 AP — within single-fold
 noise. That argues for averaging several configs and seeds rather than trusting
@@ -132,6 +226,417 @@ nearest-index mapping collapses distinct ranks onto equal values, and those ties
 *do* move the precision–recall curve. The mapping interpolates and adds a
 strictly increasing epsilon to guarantee the ordering survives exactly.
 
+## Stage 0 — the measuring instruments
+
+Submission 1 scored 0.7252 locally and 0.52708 on the leaderboard. Nothing was
+broken; the fold averaged a regime change away. Stage 0 built the instruments
+that make that mistake hard to repeat, and ran the diagnostics that should have
+come before any modelling.
+
+### The tail window is now a fold
+
+Two geometries, both scoring 2026-06-29 → 07-15 (67,196 rows, 1,068 positives):
+
+| fold | cutoff | days ahead | what it answers |
+|---|---|---|---|
+| `tail_late` | 2026-05-14 | 46–62 | the LB-tracking slice; shares `primary_62d`'s cutoff, so it is a **free second read on the same fit** |
+| `tail_recent` | 2026-06-28 | 1–17 | the only geometry whose training data ends inside the new regime, so the only one that can see recency adaptation working |
+
+`harness.run_folds` groups folds by cutoff and fits each cutoff once, so
+reporting the tail costs one extra masked AP call rather than a second model.
+
+**The tail's measured 95% bootstrap band is ±0.027 AP** — wider than the ±0.02
+previously assumed. A bare point estimate from it is not evidence. Comparisons
+use `evaluate.paired_ap_delta`, a paired bootstrap over identical rows, which
+cancels the shared sampling noise and puts the interval on the difference.
+
+A third geometry, `tail_far` (cutoff 2026-04-15, 75–91 days ahead over the same
+rows), is a **stress read and never a selection target**. The real test window
+stops at 62 days, so `tail_far` asks a question nothing else can: of two configs
+that `tail_late` cannot separate, which one is still standing when the drift has
+had three months to work? That is the regime the September half of the test set
+is in.
+
+#### The early-stopping window was inside the window it was judging
+
+The convention was "early-stop on the widest window at this cutoff, then report
+the narrow ones as free reads on a model that was not tuned to them". It is a
+good rule and it was applied to a case where it does not hold: `tail_late`
+(06-29 → 07-15) is a **strict subset** of `primary_62d` (05-15 → 07-15), so
+stopping on `primary_62d` chose the round count using 1,068 of the tail's own
+positives — 28% of the stopping set. The tail was not the independent read it
+was described as.
+
+`validation.stopping_fold` now returns a registered window built to be disjoint
+from every tail window (`es_late`, 05-15 → 06-28) and asserts the disjointness
+rather than trusting the caller. `primary_62d` still overlaps its own stopping
+window — no window at that cutoff can early-stop a 62-day fold without touching
+it — which is accepted precisely because `primary_62d` is no longer selected on.
+
+The contamination was *shared across candidates*, so the paired deltas in the
+Stage 1 tables below are unaffected; it is the absolute levels that were
+slightly optimistic. Numbers produced before the fix are marked where they
+appear.
+
+### The reference nobody had measured
+
+`baseline.py` — a bare LightGBM on raw columns only:
+
+| window | raw baseline | full pipeline | FE multiple |
+|---|---|---|---|
+| `tail_late` | 0.2259 | 0.5481 | 2.4× |
+| `primary_62d` | 0.3167 | 0.7336 | 2.3× |
+| `wf_mar` | 0.4238 | 0.8170 | 1.9× |
+
+The engineering more than doubles the raw score, and it does so **on the tail as
+much as on the primary fold** — so it is not buying old-regime performance and
+paying for it in the test period. That was worth knowing rather than assuming.
+
+The raw model also reproduces the weekly cliff, which is the cleanest evidence
+that the collapse is in the data and not something the feature pipeline
+introduced. With nothing but amount, hour, day of week, account age and the
+five categoricals:
+
+| week ending | 05-17 | 05-31 | 06-14 | 06-28 | **07-05** | **07-12** |
+|---|---|---|---|---|---|---|
+| raw baseline AP | 0.4325 | 0.3731 | 0.3250 | 0.3541 | **0.2402** | **0.1868** |
+| lift over that week's base | 33.9× | 21.9× | 19.6× | 20.2× | 15.2× | **12.0×** |
+
+Same shape as the full pipeline's, on a model that has no history features at
+all to get stale.
+
+**`scale_pos_weight` makes it worse.** Same features, same folds: unweighted
+0.3167 vs `spw=55.8` 0.3071 on `primary_62d`, 0.2259 vs 0.2145 on `tail_late`,
+and the unweighted model wins **6 of 6 windows**. Average precision reads only
+the ordering, so upweighting the positive class adds no information and only
+distorts the leaf values. It is well supported as an alternative to SMOTE; that
+is not the same as being better than nothing.
+
+### The drift is concept drift, not covariate shift
+
+`adversarial_validation.py` trains a classifier to tell train rows from test
+rows. On the raw columns it reaches AUC 0.612 — and **0.514, chance, once
+`account_age_days` is removed**, which separates only because it counts one per
+day for every returning customer. `amount_bdt` has PSI 0.0002 and KS 0.0030
+between train and test: the amount distribution did not move.
+
+What moved is `P(fraud | amount)`. That distinction settles a question rather
+than raising one:
+
+- **Density-ratio / inverse-propensity weighting cannot help.** It corrects a
+  shift in `p(x)` while assuming `p(y|x)` is fixed — exactly backwards here.
+  The weights it produces are nearly uniform anyway (p99 = 1.83, effective
+  sample size 93.9%). Two independent LightGBM studies also found this exact
+  correction losing to an untouched baseline (Pan et al., AdKDD 2020: IPW lost
+  on all six drifted datasets by 1.7–4.5 AUC points; Qian et al.: 0.7202 vs a
+  0.7237 baseline). The weights are still written to
+  `adversarial_weights.parquet` so the claim stays checkable.
+- **The PSI rule of thumb is unusable at this scale.** The 0.10/0.25 bands are
+  Lewis (1994), calibrated for samples in the hundreds. PSI is asymptotically
+  `(1/n + 1/m)·χ²_{B−1}`, so at 67k-vs-67k the 5% critical value is ~0.0005 —
+  500× below the rule of thumb. PSI is reported as an effect size for ranking,
+  with `psi_critical` giving the honest test.
+
+### 44 features are `transaction_id` in disguise
+
+On the **engineered** matrix the adversarial classifier reaches **AUC 1.0000**.
+44 features are monotone in stream position *and* separable on their own; the
+worst have test values almost entirely outside their train range:
+
+| feature | adversarial AUC | train mean | test mean |
+|---|---|---|---|
+| `merch_age_days` | 0.997 | 98.7 | 226.2 |
+| `dev_age_days` | 0.995 | 94.8 | 221.4 |
+| `g_comp_size` | 0.981 | 38,547 | 57,356 |
+| `gnn_cm_cos` | 0.933 | 0.571 | 0.958 |
+
+Every test row sits past the largest split point the trees ever saw. The
+iterative procedure (`--mode iterate`) had to strip **90 features** before the
+AUC came near 0.75, and plateaued at 0.79 — the separability is pervasive.
+
+`BANNED_FEATURES` was built to stop exactly this and does not catch any of it,
+because none of them is literally a clock. Note also that `*_age_frac`, the
+existing drift-stable counterpart, is not automatically safe: `dev_age_frac`
+still separates at AUC 0.678 because it saturates toward 1 as the stream grows.
+
+## Stage 1 — what the feature work actually bought
+
+Every candidate below is one LightGBM fitted at the `primary_62d` cutoff and
+read on both windows, with a paired bootstrap against the reference on the tail.
+`ablate.py` produces this table; the verdict is deliberately conservative, since
+a change has to clear the ~0.003 run-to-run floor *and* win the paired test.
+
+| candidate | tail_late | primary_62d | tail Δ | 95% interval | verdict |
+|---|---|---|---|---|---|
+| reference (240 feat) | 0.5495 | 0.7344 | — | — | reference |
+| **no encoder delay** | 0.5424 | 0.7182 | **−0.0071** | [−0.0105, −0.0036] | **WORSE** |
+| drop all 44 time-counters | 0.5358 | 0.7161 | **−0.0137** | [−0.0203, −0.0077] | **WORSE** |
+| drop `amount` block | 0.5426 | 0.7204 | −0.0069 | [−0.0137, −0.0010] | WORSE |
+| drop `velocity` block | 0.5433 | 0.7227 | −0.0061 | [−0.0099, −0.0023] | WORSE |
+| drop `entity` block | 0.5465 | 0.7286 | −0.0029 | [−0.0064, +0.0006] | no result |
+| drop `encoding` block | 0.5505 | 0.7327 | +0.0011 | [−0.0016, +0.0041] | no result |
+| drop `graph` block | 0.5514 | 0.7354 | +0.0020 | [−0.0006, +0.0044] | no result |
+| drop `temporal` block | 0.5491 | 0.7345 | −0.0004 | [−0.0029, +0.0022] | no result |
+| drop 7 severe counters | 0.5479 | 0.7319 | −0.0016 | [−0.0040, +0.0011] | no result |
+| **drop everything Stage 1 added** | 0.5483 | 0.7334 | **−0.0012** | [−0.0041, +0.0014] | **no result** |
+| drop `behaviour:habit` | 0.5496 | 0.7348 | +0.0001 | [−0.0020, +0.0025] | no result |
+| drop `behaviour:repetition` | 0.5510 | 0.7345 | +0.0015 | [−0.0006, +0.0037] | no result |
+| drop `behaviour:travel` | 0.5506 | 0.7339 | +0.0011 | [−0.0012, +0.0037] | no result |
+| drop `behaviour:youth` | 0.5488 | 0.7336 | −0.0007 | [−0.0032, +0.0017] | no result |
+
+Three things follow, and only one of them is a win.
+
+### The feedback delay is the result
+
+A fraud label does not exist when the transaction happens; it exists once an
+investigation confirms it. Without a delay, a *training* row reads an encoder
+that is perfectly up to date while a *test* row reads one frozen at the cutoff
+and up to 62 days stale — so the model learns to trust the encoder more than it
+will deserve at scoring time. Delaying the training rows' view closes the gap.
+
+Confirmed on **every window**, not just the one it was measured on:
+
+| delay | primary_62d | tail_late | tail_recent | wf_mar | wf_apr | wf_may |
+|---|---|---|---|---|---|---|
+| **7 d** (default) | 0.7336 | 0.5481 | 0.5622 | 0.8170 | 0.7894 | 0.7969 |
+| none | −0.0154 | −0.0080 | −0.0065 | −0.0182 | −0.0277 | −0.0190 |
+| 3 d | −0.0006 | −0.0003 | −0.0002 | −0.0012 | +0.0010 | −0.0013 |
+| 14 d | −0.0013 | +0.0006 | +0.0002 | −0.0005 | +0.0030 | −0.0007 |
+| 30 d | −0.0002 | +0.0004 | −0.0006 | +0.0004 | −0.0001 | −0.0010 |
+
+Removing the delay costs **6 of 6 windows**, by 0.008 to 0.028 AP. Every delay
+from 3 to 30 days is equivalent to within noise. So the effect is *having* a
+delay, not tuning one — the damage comes from the encoder being perfectly fresh
+for training rows, and three days of staleness is enough to remove it.
+`config.TE_FEEDBACK_DELAY_D = 7.0`, following the ULB handbook.
+
+### The new features are not
+
+`drop_all_stage1` — removing all 42 columns this pass added — moves the tail by
+−0.0012, inside the noise floor. The blocks measure the same way individually.
+
+This is not for want of standalone signal. `amt_ratio_mean_30d`, the 30-day RFM
+window the repo did not have, reaches AP 0.183 on the tail on its own (11.5×
+base rate), second only to raw amount. It is simply **redundant**: the existing
+`amt_ratio_median`, `amt_ratio_mean` and `amt_rank_30d` already carry that
+information, and a tree does not care that a fourth column agrees with them.
+
+Some of the additions have no signal at all, which is worth recording:
+
+- **Round-number amounts do nothing here.** `amt_round_500`, `amt_cents` and
+  `amt_has_cents` all sit at 1.00× base-rate lift. The mobile-money literature
+  expects round figures to matter; in this data they do not.
+- **Exact duplicates essentially do not occur.** Amounts are continuous to the
+  paisa, so `(customer, merchant, amount)` never repeats inside an hour — that
+  column was identically zero across all 994,590 rows and is dropped at build
+  time. The 24h and 7d versions fire on ~0.02% of rows at 1.00× lift.
+- **Entropy is weak; surprise is better.** Normalised entropy over a customer's
+  category history reaches 1.07–1.36× lift, while the self-information of the
+  observed category (`cust_dtype_surprise`) reaches 2.41×. If the habit family
+  is revisited, the surprise form is the one to keep.
+- **A binary flag is not an interaction.** `is_young_account` alone is 1.00×;
+  `young_acct_risk`, which combines it with an unusual amount and an unfamiliar
+  device, is 4.96×. Single-feature AP systematically understates anything that
+  only matters in combination, which is why the model-level ablation is the
+  arbiter and not the standalone scan.
+
+They are kept — leakage-clean, cheap, and useful as ensemble diversity — but
+they are recorded as *no result*, not as an improvement.
+
+### Dropping the drift-flagged counters is actively harmful
+
+The adversarial diagnostic says 44 features separate train from test almost
+perfectly. The obvious move is to drop them. Measured, that costs **−0.0137 on
+the tail** and −0.0183 on `primary_62d`, both well outside the interval.
+
+So a feature can be a near-perfect train/test discriminator and still be worth
+carrying. The trees appear to use these counters for within-period ordering,
+which survives even when every test row lands in the rightmost bin. This is the
+over-dropping failure Pan et al. record (a 12-point AUC collapse on one of their
+datasets), reproduced here.
+
+### A worked example of selecting on the evaluation window
+
+Two candidates were sub-threshold positives: dropping the `graph` block
+(+0.0020) and dropping the new amount columns (+0.0022). Combining them, and
+then keeping only the blocks with significant verdicts, looked like a real gain:
+
+| candidate | tail_late | primary_62d | verdict on the tail |
+|---|---|---|---|
+| reference (243 feat) | 0.5481 | 0.7336 | reference |
+| drop graph + new amount (200) | 0.5513 | 0.7349 | **BETTER** (+0.0033) |
+| significant blocks only (172) | 0.5525 | 0.7362 | **BETTER** (+0.0045) |
+
+Both clear the paired test. Then check the windows they were *not* selected on:
+
+| candidate | tail_recent | wf_mar | wf_apr | wf_may |
+|---|---|---|---|---|
+| drop graph + new amount | **−0.0022** | +0.0003 | +0.0006 | −0.0027 |
+| significant blocks only | **−0.0035** | −0.0004 | +0.0001 | −0.0009 |
+
+Flat to negative everywhere else. `tail_recent` is the sharpest disconfirmation
+available: it scores the *identical rows*, differing only in that the model was
+trained six weeks later — and it disagrees in sign.
+
+The gain was selection bias. The feature set was chosen by reading `tail_late`,
+so it fits `tail_late`. **Neither trim is adopted.** The lesson generalises to
+anything else picked off the tail: the tail is small, and choosing against it
+repeatedly will overfit it exactly the way chasing a public leaderboard does.
+
+## Stage 2 — tuning the fitting procedure, not the features
+
+Run with `tune.py`, which differs from `ablate.py` in what it varies: the model
+and how it is fitted, rather than which columns it sees. Selection is on
+`tail_late`, confirmation on `tail_recent` (the same rows from a later cutoff),
+and a candidate that helps one while hurting the other is recorded as **SPLIT**
+rather than adopted.
+
+### Hyperparameters do not matter here
+
+Five LightGBM configurations spanning the ranges the literature recommends —
+`learning_rate` 0.03–0.05, `num_leaves` 31–255, `min_data_in_leaf` 50–300,
+`feature_fraction` 0.5–0.8, `lambda_l1/l2` 0–10, plus extremely randomized
+splits:
+
+| config | tail_late | tail_recent | primary_62d | verdict |
+|---|---|---|---|---|
+| `lgb_base` (64 leaves, lr 0.05) | **0.5509** | 0.5593 | 0.7351 | reference |
+| `lgb_shallow` (31 leaves) | 0.5503 | 0.5595 | 0.7350 | no result |
+| `lgb_deep` (255 leaves, lr 0.03) | 0.5498 | **0.5607** | 0.7326 | no result |
+| `lgb_reg` (heavy L1+L2, min_data 300) | 0.5472 | **0.5615** | 0.7327 | SPLIT |
+| `lgb_extra` (extremely randomized) | 0.5449 | 0.5595 | 0.7307 | SPLIT |
+
+Total spread 0.0060 AP on a window whose own 95% band is ±0.027. Nothing here
+is a result, and the two configs that move furthest move *in opposite
+directions on the two folds* — which is the signature of noise, not of a
+tuning gradient.
+
+There is one suggestive pattern, held loosely because it does not clear the
+floor: regularization ranks worst at 46–62 days ahead and best at 1–17. If real,
+it says a heavily regularized model has less to lose from being stale, which is
+the wrong trade when the model *will* be stale. The feature work bought 2.3–2.4×
+over raw columns; the hyperparameters buy nothing.
+
+### Recency weighting does not pay, and now we know why
+
+This was the repo's largest open question. The earlier verdict was measured on
+`primary_62d`, whose 62-day window averages two fraud regimes and structurally
+cannot see drift adaptation working, so it was marked superseded. `tail_recent`
+(cutoff 2026-06-28, training data ending *inside* the new regime) can see it.
+Both knobs, scored on all three geometries:
+
+| candidate | tail_late | tail_recent | tail_far | verdict |
+|---|---|---|---|---|
+| `lgb_base` (no adaptation) | 0.5509 | 0.5593 | 0.5304 | reference |
+| `hl_21d` | 0.5535 | 0.5586 | 0.5290 | no result |
+| `hl_14d` | 0.5531 | 0.5592 | 0.5313 | no result |
+| `hl_45d` | 0.5511 | 0.5608 | 0.5299 | no result |
+| `hl_7d` | 0.5501 | 0.5545 | 0.5236 | unclear |
+| `hl_90d` | 0.5500 | **0.5626** | 0.5315 | SPLIT |
+| `win_45d` (24% of the data) | 0.5516 | 0.5599 | 0.5312 | no result |
+| `win_90d` | 0.5493 | 0.5624 | 0.5311 | SPLIT |
+| `win_120d` | 0.5498 | 0.5608 | 0.5305 | no result |
+
+Half-lives from 7 to 90 days and hard windows from 45 to 120 days: **not one
+clears the noise floor**, on the fold built to detect exactly this. The verdict
+is no longer superseded — it is confirmed, on the right evidence.
+
+The explanation is the interesting part. **`win_45d` trains on 175,571 rows —
+24% of the labelled data — and scores the same as training on all 731,942.**
+Three quarters of the training set contributes nothing measurable. That is why
+recency weighting cannot help: it exists to down-weight stale rows, and the
+model was already ignoring them. The signal here is short-memory, and a
+weighting scheme has nothing left to correct.
+
+### CatBoost was written off on stale evidence
+
+"Do not equal-weight ensemble across model families" was recorded when XGBoost
+and CatBoost both scored below every LightGBM config. Re-measured on 243
+features and read on the tail, that is no longer true:
+
+| member | tail_late | tail_recent | primary_62d |
+|---|---|---|---|
+| `cat_base` | **0.5530** | 0.5608 | **0.7375** |
+| `lgb_base` | 0.5509 | 0.5593 | 0.7351 |
+| `xgb_base` | 0.5482 | **0.5620** | 0.7337 |
+| `xgb_shallow` | 0.5467 | 0.5606 | 0.7322 |
+
+CatBoost is now the **best single model in the project** on both `tail_late` and
+`primary_62d` (0.7375 against the 0.7239 the old note was written about), and
+XGBoost is the best of anything at the short horizon. None of the gaps clears
+the noise floor, so this is not "switch to CatBoost" — it is "the reason for
+excluding two thirds of the model families no longer holds, and an ensemble may
+now have three families to draw on instead of one."
+
+### The ensemble ladder, and the rule that had to be rewritten mid-run
+
+Blend options divide into two classes that must not be judged on the same terms:
+
+* **Unweighted** — one model, or an equal average over an a-priori group.
+  Nothing about them was chosen by looking at the tail, so the measured
+  objective is an honest estimate and the best one simply wins.
+* **Fitted** — the Caruana hill-climb, whose weights are optimised on the very
+  1,068 positives the paired bootstrap then resamples. The bootstrap cannot see
+  that bias.
+
+The first version of this ladder ignored the distinction: it started from the
+simplest option and adopted anything that beat it by more than the noise floor.
+Run over 16 members it **adopted the hill-climb** — which had put weight on
+`hl_7d`, individually the *worst* member of the pool. A greedy search reaching
+for a bad-but-decorrelated member to squeeze one specific window is the
+signature of overfitting, and `significant_blocks_only` is the receipt: it
+cleared a paired test at +0.0045 on `tail_late` and went negative on
+`tail_recent`.
+
+Rewritten: pick the best unweighted option outright, and require a fitted blend
+to beat *that* by twice the floor. The verdict inverts.
+
+| option | members | tail_late | tail_recent | objective |
+|---|---|---|---|---|
+| `equal_lgb_all` | 13 LightGBM | 0.5530 | 0.5630 | **0.5580** |
+| `equal_all` | 16, all families | 0.5529 | 0.5630 | 0.5579 |
+| `best_single` (`cat_base`) | 1 | 0.5530 | 0.5608 | 0.5569 |
+| `equal_core` (submission 2) | 5 | 0.5507 | 0.5615 | 0.5561 |
+| `hill_climb` | 6, fitted | 0.5543 | 0.5633 | 0.5588 |
+
+The hill-climb still has the highest objective. It beats `equal_core` by +0.0036
+and the *best unweighted option* by +0.0008 — and the second number is the one
+that matters. Rejected. `equal_lgb_all` is adopted: thirteen equally weighted
+members, not one weight learned from the tail. It ties `equal_all` at 0.0001,
+which is not a distinction; the rule picks by objective rather than letting
+taste in through a gap that small.
+
+### Entity post-processing: the version that works is the version that cheats
+
+The IEEE-CIS winners replaced every prediction for a client with that client's
+mean. Ported here as `p' = (1-a)·p + a·(entity statistic)` over `customer`,
+`merchant` and `device`, with four statistics and six values of `a`:
+
+| statistic | what it assumes | tail_late delta |
+|---|---|---|
+| `mean` | the entity is broadly risky | **−0.09 to −0.28** |
+| `max` (over all scored rows) | one bad transaction condemns the rest | +0.0040 at a=0.5, +0.0044 at a=0.7 |
+| `cummax` (past-only) | same, using only the entity's earlier rows | **+0.0004** |
+
+Two findings, and the second is the one that matters.
+
+**Mean is catastrophic**, by −0.09 to −0.28 AP. It is the natural port of the
+IEEE-CIS move and it fails for a structural reason: there, the label was a
+property of the client, so pooling within a client added information. Here fraud
+is per-transaction and a customer's fraudulent rows are a small minority of
+their own history, so averaging deletes exactly the within-entity ordering that
+average precision is computed from.
+
+**Max looks like a real gain — until it is made causal.** `device`/`max` at
+a=0.5 clears the floor with a paired interval of [+0.0019, +0.0063]. It was
+adopted, then re-run as `cummax`, which restricts each row to its device's
+*earlier* rows. The gain went to +0.0004: **nothing**. So the entire effect came
+from a July test row being adjusted by a September one, which is the two-sided
+aggregation the rules exclude — they permit non-target aggregation over test
+rows only "in a strictly-past-only way". There is no fraud-ring signal being
+recovered here; there is only the future. **No post-processing is adopted**, and
+`blend.py` now refuses to adopt any non-causal variant regardless of its score.
+
 ## The three rules the design is built around
 
 1. **Strictly past-only.** Every feature for a transaction at time *t* uses only
@@ -161,19 +666,25 @@ strictly increasing epsilon to guarantee the ordering survives exactly.
 src/
   config.py              paths, windows, fold definitions, banned columns
   io_utils.py            load, clean, build the combined time-sorted stream
-  validation.py          forward-block folds + average precision
+  validation.py          forward-block folds incl. the two tail folds
+  evaluate.py            AP + lift, weekly/horizon breakdowns, bootstrap bands
+  harness.py             fold running (one fit per cutoff) + the feature cache
   leakage_checks.py      the guards described below
   features/
     _windows.py          the past-only window primitive everything routes through
     temporal.py          hour/day, cyclical, night, per-customer circular rhythm
-    amount.py            amount vs own history; drift-robust trailing ranks
+    amount.py            amount vs own history; RFM windows; trailing ranks
     velocity.py          customer/device/merchant recency + rolling windows
     entity.py            pair novelty, device sharing, diversity, movement
-    encoding.py          past-only target encoding, frozen at the train cutoff
+    behaviour.py         habit/surprise, repetition, travel rate, account youth
+    encoding.py          past-only target encoding, frozen cutoff + feedback delay
     graph.py             snapshot bipartite graph: degrees, components, spectral
     gnn.py               self-supervised temporal GNN embeddings (Tier C)
 build_features.py        orchestrator
 train_check.py           walk-forward feature validation harness
+baseline.py              raw-column reference AP -- the denominator
+adversarial_validation.py  train-vs-test drift: AUC, PSI, KS, drop shortlist
+ablate.py                does a change help on the tail? paired-bootstrap verdicts
 notebooks/               thin Kaggle-ready wrapper
 ```
 
@@ -269,6 +780,30 @@ intermediate experiments.
 - Per-customer circular-time features (von Mises, Bahnsen et al. 2016)
   underperform a plain night flag here: fraud in this dataset is *globally*
   nocturnal rather than anomalous relative to each customer's own rhythm.
+- **A stale encoder beats a fresh one.** Giving the target encoder a 7-day
+  feedback delay — so a training row reads labels as they stood a week earlier,
+  the way a deployed system would — is worth 0.008 to 0.028 AP on all six
+  windows. Without it, training rows see a perfectly current encoder while test
+  rows see one frozen at the cutoff, and the model calibrates its trust to a
+  freshness it will not get. Any delay from 3 to 30 days works equally well.
+- **`scale_pos_weight` costs AP.** Unweighted beats `spw = 55.8` on 6 of 6
+  windows. Average precision reads only the ordering, so upweighting the
+  positive class adds no information — it only distorts the leaf values.
+- **A perfect train/test discriminator can still be worth keeping.** 44
+  features separate the two periods at up to AUC 0.997 because they are
+  unbounded counters; dropping them costs 0.014 AP on the tail. The adversarial
+  diagnostic is good at *finding* drift-exposed features and bad at deciding
+  their fate.
+- **Round-number amounts and exact duplicates carry nothing here.**
+  `amt_round_500`, `amt_cents` and the duplicate counters all sit at ~1.00×
+  base-rate lift, and `(customer, merchant, amount)` never repeats inside an
+  hour across 994,590 rows, because amounts are continuous to the paisa. The
+  mobile-money literature expects both to matter; this generator does not
+  produce them.
+- **Surprise beats entropy.** The self-information of the observed category
+  under a customer's own history reaches 2.4× lift; the entropy of that history
+  reaches 1.4×. "How unusual is *this* choice" is a sharper question than "how
+  varied is this customer".
 
 ## Integrity note — `signup_inconsistency_d`
 

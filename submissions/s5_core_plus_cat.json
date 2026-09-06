@@ -1,0 +1,33 @@
+{
+  "name": "s5_core_plus_cat",
+  "note": "The five LightGBM configs that scored 0.54151 as submission 2, plus cat_base, equally weighted, 2 seeds each. Chosen from leaderboard evidence rather than local AP: submission 3 showed that adding 8 near-clone LightGBM recency/window variants COST 0.0025 on the board while gaining 0.0023 locally, so more members is not free - but cat_base is a different algorithm with different failure modes and is the best single model in the project. Minimal principled step from the best known clean configuration. Clean line: USE_SIGNUP_INCONSISTENCY=False.",
+  "spec": "inline",
+  "weights": {
+    "lgb_base": 0.1667,
+    "lgb_deep": 0.1667,
+    "lgb_shallow": 0.1667,
+    "lgb_reg": 0.1667,
+    "lgb_extra": 0.1666,
+    "cat_base": 0.1666
+  },
+  "seeds": 2,
+  "postprocess": null,
+  "members": [
+    "lgb_base_s0",
+    "lgb_base_s1",
+    "lgb_deep_s0",
+    "lgb_deep_s1",
+    "lgb_shallow_s0",
+    "lgb_shallow_s1",
+    "lgb_reg_s0",
+    "lgb_reg_s1",
+    "lgb_extra_s0",
+    "lgb_extra_s1",
+    "cat_base_s0",
+    "cat_base_s1"
+  ],
+  "local": {},
+  "n_features": 243,
+  "te_feedback_delay_d": 7.0,
+  "use_signup_inconsistency": false
+}

@@ -1,0 +1,30 @@
+{
+  "name": "s4_signup_integrity",
+  "note": "Submission 2 exactly, with config.USE_SIGNUP_INCONSISTENCY=True as the only change: same 5 configs, same equal weights, same 2 seeds, same round book. One submission spent to measure what the signup-date inconsistency feature is worth on the leaderboard. NOT adopted for the main line - it is 85.8 percent precise and reads as a fingerprint of how fraud rows were synthesised rather than behaviour, and the rules call reverse-engineering the generative assumptions 'not the intended path'.",
+  "spec": "inline",
+  "weights": {
+    "lgb_base": 0.2,
+    "lgb_deep": 0.2,
+    "lgb_shallow": 0.2,
+    "lgb_reg": 0.2,
+    "lgb_extra": 0.2
+  },
+  "seeds": 2,
+  "postprocess": null,
+  "members": [
+    "lgb_base_s0",
+    "lgb_base_s1",
+    "lgb_deep_s0",
+    "lgb_deep_s1",
+    "lgb_shallow_s0",
+    "lgb_shallow_s1",
+    "lgb_reg_s0",
+    "lgb_reg_s1",
+    "lgb_extra_s0",
+    "lgb_extra_s1"
+  ],
+  "local": {},
+  "n_features": 244,
+  "te_feedback_delay_d": 7.0,
+  "use_signup_inconsistency": true
+}

@@ -21,3 +21,23 @@ data/processed/*
 !data/processed/feature_gain.csv
 !data/processed/search_results.csv
 !data/processed/blend_spec.json
+# The measurement record. These are small, and they are the evidence behind
+# every claim in README.md and SUBMISSIONS.md -- losing them would leave the
+# conclusions unfalsifiable.
+!data/processed/baseline_results.csv
+!data/processed/adversarial_features.csv
+!data/processed/adversarial_by_week.csv
+!data/processed/adversarial_drop_order.csv
+!data/processed/ablation_results.csv
+!data/processed/fold_results.csv
+!data/processed/tune_results.csv
+!data/processed/tune_rounds.json
+!data/processed/postprocess_results.csv
+!data/processed/blend_spec_v2.json
+!data/processed/blend_spec_equal_all.json
+
+# Submission CSVs are ~9 MB each and reproducible from submit.py; the sidecar
+# JSON that records what produced each one is the part worth keeping.
+submissions/*.csv
+
+.aider*

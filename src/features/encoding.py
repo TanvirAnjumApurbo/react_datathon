@@ -16,6 +16,28 @@ row scored after the cutoff -- whether a real test row or a validation row in a
 backtest -- reads the same frozen table. `fit_cutoff` makes that explicit, so a
 backtest fold reproduces the exact asymmetry the leaderboard will impose.
 
+**Feedback delay.** A fraud label does not exist when the transaction happens;
+it exists once an investigation or a chargeback confirms it. The ULB handbook
+models this by computing the risk for day N from labels available only up to
+day N - 7, and the same delay is applied here to every target-derived column.
+
+It matters for more than realism. Without a delay, a training row reads an
+encoder that is completely up to date -- labels included the instant they
+occur -- while a test row reads one frozen at the cutoff and up to 62 days
+stale. The model therefore learns to trust the encoder more than the encoder
+deserves at scoring time. Delaying the training rows' view makes the two look
+more alike. `config.TE_FEEDBACK_DELAY_D` sets it; 0.0 restores the previous
+behaviour, and the ablation is what decides which is better.
+
+The delay also puts a short ramp on the far side of the cutoff, and that ramp
+is correct rather than incidental. A row one day past the cutoff reads labels
+up to six days *before* it; a row thirty days past reads every trainable label,
+because by then all of them are old enough to have been adjudicated. The real
+test period gets exactly that treatment, and so does a backtest fold, so the
+two stay faithful to each other. Measured on `primary_62d`, the ramp moves
+`te_location` by at most 0.003 -- the low-cardinality categories carry enough
+count that a week of labels barely shifts them.
+
 Deliberately excluded: any feature derived from a customer's own past labels
 (e.g. "this customer has been defrauded before"). It measures 2.0x lift on
 train (2.79% vs 1.38%) and is computable there, but is structurally absent for
@@ -27,6 +49,7 @@ import numpy as np
 import pandas as pd
 
 from .. import config as C
+from ._windows import WindowIndex
 
 # Columns worth encoding. location is the strongest candidate (a 2.9x spread
 # from LOC_007 at 5.15% down to LOC_017 at 1.18%); merchant_id is the weakest
@@ -58,22 +81,38 @@ def _expanding_te(
     trainable: np.ndarray,
     alpha: float,
     prior: float,
+    epoch: np.ndarray | None = None,
+    delay_s: int = 0,
 ) -> np.ndarray:
     """Strictly-past expanding smoothed mean of the target, per category.
 
     `trainable` marks rows whose label may be consumed (train rows before the
     cutoff). Rows outside it contribute nothing to the running sums, so the
     encoder naturally freezes once the labelled period ends.
+
+    With `delay_s > 0` a label only enters the statistic once it is that many
+    seconds old, so a row at time t reads categories as they looked at
+    t - delay. Rows after the cutoff are unaffected: their admissible history
+    is the whole trainable period either way, and the delay only bites where
+    the two are close together, which is the training period.
     """
     contrib_y = np.where(trainable, np.nan_to_num(y, nan=0.0), 0.0)
     contrib_n = trainable.astype(np.float64)
 
-    s = pd.Series(contrib_y)
-    n = pd.Series(contrib_n)
-    g = pd.Series(codes)
-    # cumsum includes the current row; subtract it to stay strictly past.
-    cum_y = s.groupby(g, sort=False).cumsum().to_numpy() - contrib_y
-    cum_n = n.groupby(g, sort=False).cumsum().to_numpy() - contrib_n
+    if delay_s > 0:
+        if epoch is None:
+            raise ValueError("a feedback delay needs the epoch column")
+        # A single index per category, reused for both sums.
+        widx = WindowIndex(codes, np.asarray(epoch, dtype=np.int64))
+        cum_y = widx.sum_before_lag(contrib_y, delay_s)
+        cum_n = widx.sum_before_lag(contrib_n, delay_s)
+    else:
+        s = pd.Series(contrib_y)
+        n = pd.Series(contrib_n)
+        g = pd.Series(codes)
+        # cumsum includes the current row; subtract it to stay strictly past.
+        cum_y = s.groupby(g, sort=False).cumsum().to_numpy() - contrib_y
+        cum_n = n.groupby(g, sort=False).cumsum().to_numpy() - contrib_n
     return (cum_y + prior * alpha) / (cum_n + alpha)
 
 
@@ -85,6 +124,7 @@ def _decayed_te(
     halflife_d: float,
     alpha: float,
     prior: float,
+    delay_s: int = 0,
 ) -> np.ndarray:
     """Exponentially time-decayed variant, so the encoder tracks drift.
 
@@ -101,9 +141,31 @@ def _decayed_te(
     out = np.empty(n)
 
     y_f = np.nan_to_num(y, nan=0.0)
+    # Two pointers over the same time-sorted stream: `rel` walks the labels as
+    # they become available, `i` walks the rows being scored. Both epoch and
+    # epoch+delay are non-decreasing, so one pass suffices and no queue is
+    # needed. The contribution is folded in at its *release* time rather than
+    # its transaction time, so information ages from when it could first have
+    # been acted on -- which is what the decay is modelling.
+    rel = 0
     for i in range(n):
-        c = codes[i]
         t = epoch[i]
+        while rel < n and epoch[rel] + delay_s <= t:
+            if trainable[rel]:
+                cr = codes[rel]
+                tr = epoch[rel] + delay_s
+                if seen[cr]:
+                    d = np.exp(-lam * (tr - last_t[cr]))
+                    acc_y[cr] *= d
+                    acc_n[cr] *= d
+                else:
+                    seen[cr] = True
+                last_t[cr] = tr
+                acc_y[cr] += y_f[rel]
+                acc_n[cr] += 1.0
+            rel += 1
+
+        c = codes[i]
         if seen[c]:
             d = np.exp(-lam * (t - last_t[c]))
             acc_y[c] *= d
@@ -112,13 +174,14 @@ def _decayed_te(
             seen[c] = True
         last_t[c] = t
         out[i] = (acc_y[c] + prior * alpha) / (acc_n[c] + alpha)
-        if trainable[i]:
-            acc_y[c] += y_f[i]
-            acc_n[c] += 1.0
     return out
 
 
-def build(df: pd.DataFrame, fit_cutoff: pd.Timestamp | None = None) -> pd.DataFrame:
+def build(
+    df: pd.DataFrame,
+    fit_cutoff: pd.Timestamp | None = None,
+    delay_d: float | None = None,
+) -> pd.DataFrame:
     """Build target-encoded columns.
 
     Parameters
@@ -131,6 +194,9 @@ def build(df: pd.DataFrame, fit_cutoff: pd.Timestamp | None = None) -> pd.DataFr
     """
     if fit_cutoff is None:
         fit_cutoff = C.TRAIN_END
+    if delay_d is None:
+        delay_d = C.TE_FEEDBACK_DELAY_D
+    delay_s = int(round(float(delay_d) * 86_400))
 
     ts = df[C.TIME_COL]
     epoch = df["ts_epoch"].to_numpy()
@@ -140,25 +206,32 @@ def build(df: pd.DataFrame, fit_cutoff: pd.Timestamp | None = None) -> pd.DataFr
 
     out = pd.DataFrame(index=df.index)
     out.attrs["fit_cutoff"] = str(fit_cutoff)
+    out.attrs["feedback_delay_d"] = float(delay_d)
 
     frames = {c: pd.factorize(df[c], sort=True)[0].astype(np.int64) for c in TE_COLS}
     frames["hour_bucket"] = _hour_bucket(ts)
 
     for col in TE_COLS:
         codes = frames[col]
-        out[f"te_{col}"] = _expanding_te(codes, y, trainable, C.TE_ALPHA, prior)
+        out[f"te_{col}"] = _expanding_te(
+            codes, y, trainable, C.TE_ALPHA, prior, epoch, delay_s
+        )
         out[f"te_{col}_decay"] = _decayed_te(
-            codes, y, trainable, epoch, C.TE_HALFLIFE_D, C.TE_ALPHA, prior
+            codes, y, trainable, epoch, C.TE_HALFLIFE_D, C.TE_ALPHA, prior, delay_s
         )
 
     for a, b in TE_CROSSES:
         cross = pd.factorize(frames[a] * 1000 + frames[b], sort=True)[0].astype(np.int64)
-        out[f"te_{a}_X_{b}"] = _expanding_te(cross, y, trainable, C.TE_ALPHA, prior)
+        out[f"te_{a}_X_{b}"] = _expanding_te(
+            cross, y, trainable, C.TE_ALPHA, prior, epoch, delay_s
+        )
 
     # merchant_id: high cardinality (4,290) and weak (fraud-rate std 0.0088).
     # Kept with heavy smoothing so the model can reject it on gain.
     m_codes = df[f"{C.MERCHANT}_code"].to_numpy().astype(np.int64)
-    out["te_merchant_id"] = _expanding_te(m_codes, y, trainable, C.TE_ALPHA * 4, prior)
+    out["te_merchant_id"] = _expanding_te(
+        m_codes, y, trainable, C.TE_ALPHA * 4, prior, epoch, delay_s
+    )
 
     float_cols = [c for c in out.columns if out[c].dtype == np.float64]
     return out.astype({c: C.FLOAT_DTYPE for c in float_cols})

@@ -1,0 +1,33 @@
+{
+  "name": "s5_signup_plus_cat",
+  "note": "Submission 4's configuration (244 features, USE_SIGNUP_INCONSISTENCY=True, five LightGBM configs) plus cat_base, equally weighted, 2 seeds each. Built on leaderboard evidence: s4 scored 0.54874, the best of the four, and s3 showed that padding a blend with near-clone LightGBM variants costs board AP even when it gains local AP - so the one member added is a different algorithm, not another clone. The flag is restored to False immediately after this fit; the feature is measured and used here on an explicit decision, and is NOT the default for the pipeline.",
+  "spec": "inline",
+  "weights": {
+    "lgb_base": 0.1667,
+    "lgb_deep": 0.1667,
+    "lgb_shallow": 0.1667,
+    "lgb_reg": 0.1667,
+    "lgb_extra": 0.1666,
+    "cat_base": 0.1666
+  },
+  "seeds": 2,
+  "postprocess": null,
+  "members": [
+    "lgb_base_s0",
+    "lgb_base_s1",
+    "lgb_deep_s0",
+    "lgb_deep_s1",
+    "lgb_shallow_s0",
+    "lgb_shallow_s1",
+    "lgb_reg_s0",
+    "lgb_reg_s1",
+    "lgb_extra_s0",
+    "lgb_extra_s1",
+    "cat_base_s0",
+    "cat_base_s1"
+  ],
+  "local": {},
+  "n_features": 244,
+  "te_feedback_delay_d": 7.0,
+  "use_signup_inconsistency": true
+}

@@ -1,8 +1,9 @@
 {
-  "n_features": 200,
+  "n_features": 243,
   "n_train": 731942,
   "n_test": 262648,
   "te_fit_cutoff": "2026-07-15 23:59:59",
+  "te_feedback_delay_d": 7.0,
   "graph_snapshot_freq": "W",
   "gnn_enabled": true,
   "features": [
@@ -80,6 +81,21 @@
       "name": "hour_volume_share",
       "block": "temporal",
       "single_feature_ap_train": 0.06443354820926285
+    },
+    {
+      "name": "merchant_category_was_missing",
+      "block": "temporal",
+      "single_feature_ap_train": 0.01762074131040603
+    },
+    {
+      "name": "device_type_was_missing",
+      "block": "temporal",
+      "single_feature_ap_train": 0.01761275634301674
+    },
+    {
+      "name": "location_was_missing",
+      "block": "temporal",
+      "single_feature_ap_train": 0.01760828773145038
     },
     {
       "name": "account_age_days",
@@ -212,6 +228,41 @@
       "single_feature_ap_train": 0.01841805796697733
     },
     {
+      "name": "amt_ratio_mean_24h",
+      "block": "amount",
+      "single_feature_ap_train": 0.10885538421677651
+    },
+    {
+      "name": "amt_share_24h",
+      "block": "amount",
+      "single_feature_ap_train": 0.03024677131867945
+    },
+    {
+      "name": "amt_ratio_mean_168h",
+      "block": "amount",
+      "single_feature_ap_train": 0.2670681590784573
+    },
+    {
+      "name": "amt_share_168h",
+      "block": "amount",
+      "single_feature_ap_train": 0.018556502632554123
+    },
+    {
+      "name": "cust_amt_mean_30d",
+      "block": "amount",
+      "single_feature_ap_train": 0.020579078208713186
+    },
+    {
+      "name": "amt_ratio_mean_30d",
+      "block": "amount",
+      "single_feature_ap_train": 0.3771183833574591
+    },
+    {
+      "name": "amt_share_30d",
+      "block": "amount",
+      "single_feature_ap_train": 0.02902902975674251
+    },
+    {
       "name": "amt_rank_7d",
       "block": "amount",
       "single_feature_ap_train": 0.23618330641434265
@@ -220,6 +271,11 @@
       "name": "amt_rank_30d",
       "block": "amount",
       "single_feature_ap_train": 0.2381186656349457
+    },
+    {
+      "name": "amt_rank_in_cust",
+      "block": "amount",
+      "single_feature_ap_train": 0.05259129942545343
     },
     {
       "name": "amt_is_int",
@@ -232,9 +288,29 @@
       "single_feature_ap_train": 0.017611392465142237
     },
     {
+      "name": "amt_round_500",
+      "block": "amount",
+      "single_feature_ap_train": 0.017641289429204732
+    },
+    {
       "name": "amt_round_1000",
       "block": "amount",
       "single_feature_ap_train": 0.01768009122960827
+    },
+    {
+      "name": "amt_cents",
+      "block": "amount",
+      "single_feature_ap_train": 0.017732827177024776
+    },
+    {
+      "name": "amt_has_cents",
+      "block": "amount",
+      "single_feature_ap_train": 0.017607845000300344
+    },
+    {
+      "name": "amt_magnitude",
+      "block": "amount",
+      "single_feature_ap_train": 0.18931634396119468
     },
     {
       "name": "cust_prior_n",
@@ -797,69 +873,209 @@
       "single_feature_ap_train": 0.022794908735048768
     },
     {
+      "name": "cust_categ_entropy",
+      "block": "behaviour:habit",
+      "single_feature_ap_train": 0.01806546159032277
+    },
+    {
+      "name": "cust_categ_surprise",
+      "block": "behaviour:habit",
+      "single_feature_ap_train": 0.022069437001764492
+    },
+    {
+      "name": "cust_locat_entropy",
+      "block": "behaviour:habit",
+      "single_feature_ap_train": 0.01841445312579784
+    },
+    {
+      "name": "cust_locat_surprise",
+      "block": "behaviour:habit",
+      "single_feature_ap_train": 0.039782791218280905
+    },
+    {
+      "name": "cust_dtype_entropy",
+      "block": "behaviour:habit",
+      "single_feature_ap_train": 0.021275402085193587
+    },
+    {
+      "name": "cust_dtype_surprise",
+      "block": "behaviour:habit",
+      "single_feature_ap_train": 0.051055034629395195
+    },
+    {
+      "name": "cust_hour_entropy",
+      "block": "behaviour:habit",
+      "single_feature_ap_train": 0.019091721237895265
+    },
+    {
+      "name": "cust_hour_surprise",
+      "block": "behaviour:habit",
+      "single_feature_ap_train": 0.04956186289646246
+    },
+    {
+      "name": "dup_exact_prior_n",
+      "block": "behaviour:repetition",
+      "single_feature_ap_train": 0.017606066762460872
+    },
+    {
+      "name": "dup_exact_24h",
+      "block": "behaviour:repetition",
+      "single_feature_ap_train": 0.01760524413853029
+    },
+    {
+      "name": "dup_exact_168h",
+      "block": "behaviour:repetition",
+      "single_feature_ap_train": 0.017605412509871108
+    },
+    {
+      "name": "dup_near_24h",
+      "block": "behaviour:repetition",
+      "single_feature_ap_train": 0.017782950316804987
+    },
+    {
+      "name": "dup_exact_share_24h",
+      "block": "behaviour:repetition",
+      "single_feature_ap_train": 0.02186104171208615
+    },
+    {
+      "name": "cust_same_ts_prior",
+      "block": "behaviour:repetition",
+      "single_feature_ap_train": 0.019215889023974198
+    },
+    {
+      "name": "dev_same_ts_prior",
+      "block": "behaviour:repetition",
+      "single_feature_ap_train": 0.018387033809528868
+    },
+    {
+      "name": "loc_switches_24h",
+      "block": "behaviour:travel",
+      "single_feature_ap_train": 0.01880164770467569
+    },
+    {
+      "name": "loc_switch_rate_24h",
+      "block": "behaviour:travel",
+      "single_feature_ap_train": 0.02151909751590389
+    },
+    {
+      "name": "loc_switches_168h",
+      "block": "behaviour:travel",
+      "single_feature_ap_train": 0.01785324016022434
+    },
+    {
+      "name": "loc_switch_rate_168h",
+      "block": "behaviour:travel",
+      "single_feature_ap_train": 0.017770178929626162
+    },
+    {
+      "name": "loc_switch_recency",
+      "block": "behaviour:travel",
+      "single_feature_ap_train": 0.02422476959751153
+    },
+    {
+      "name": "loc_switch_fast",
+      "block": "behaviour:travel",
+      "single_feature_ap_train": 0.017806157015007363
+    },
+    {
+      "name": "is_young_account",
+      "block": "behaviour:youth",
+      "single_feature_ap_train": 0.017656172468633886
+    },
+    {
+      "name": "log_account_age",
+      "block": "behaviour:youth",
+      "single_feature_ap_train": 0.018597871760612898
+    },
+    {
+      "name": "amt_per_acct_age",
+      "block": "behaviour:youth",
+      "single_feature_ap_train": 0.1124405263698392
+    },
+    {
+      "name": "acct_age_rank_30d",
+      "block": "behaviour:youth",
+      "single_feature_ap_train": 0.01790328439414471
+    },
+    {
+      "name": "new_dev_for_cust",
+      "block": "behaviour:youth",
+      "single_feature_ap_train": 0.03671780820735568
+    },
+    {
+      "name": "young_acct_risk",
+      "block": "behaviour:youth",
+      "single_feature_ap_train": 0.126221248564204
+    },
+    {
+      "name": "txn_rate_vs_acct_age",
+      "block": "behaviour:youth",
+      "single_feature_ap_train": 0.06265594573424339
+    },
+    {
       "name": "te_location",
       "block": "encoding",
-      "single_feature_ap_train": 0.029430557936171796
+      "single_feature_ap_train": 0.028402135228920555
     },
     {
       "name": "te_location_decay",
       "block": "encoding",
-      "single_feature_ap_train": 0.030079332254002854
+      "single_feature_ap_train": 0.02825443228642997
     },
     {
       "name": "te_merchant_category",
       "block": "encoding",
-      "single_feature_ap_train": 0.021910937769041697
+      "single_feature_ap_train": 0.020933021229436334
     },
     {
       "name": "te_merchant_category_decay",
       "block": "encoding",
-      "single_feature_ap_train": 0.022638281757633806
+      "single_feature_ap_train": 0.021027834832884323
     },
     {
       "name": "te_device_type",
       "block": "encoding",
-      "single_feature_ap_train": 0.023260150221626644
+      "single_feature_ap_train": 0.02271024613202916
     },
     {
       "name": "te_device_type_decay",
       "block": "encoding",
-      "single_feature_ap_train": 0.023425912335675033
+      "single_feature_ap_train": 0.022771290233232086
     },
     {
       "name": "te_payment_method",
       "block": "encoding",
-      "single_feature_ap_train": 0.019923336347037468
+      "single_feature_ap_train": 0.020056517087571557
     },
     {
       "name": "te_payment_method_decay",
       "block": "encoding",
-      "single_feature_ap_train": 0.020021592634499652
+      "single_feature_ap_train": 0.020112411465940182
     },
     {
       "name": "te_transaction_type",
       "block": "encoding",
-      "single_feature_ap_train": 0.02119570081828874
+      "single_feature_ap_train": 0.021325609215631557
     },
     {
       "name": "te_transaction_type_decay",
       "block": "encoding",
-      "single_feature_ap_train": 0.021343030222065004
+      "single_feature_ap_train": 0.021357726929758614
     },
     {
       "name": "te_hour_bucket_X_device_type",
       "block": "encoding",
-      "single_feature_ap_train": 0.09745382868401224
+      "single_feature_ap_train": 0.09201674491875768
     },
     {
       "name": "te_location_X_transaction_type",
       "block": "encoding",
-      "single_feature_ap_train": 0.02934761167139592
+      "single_feature_ap_train": 0.02815528949003189
     },
     {
       "name": "te_merchant_id",
       "block": "encoding",
-      "single_feature_ap_train": 0.09740799782937458
+      "single_feature_ap_train": 0.02337418901652808
     },
     {
       "name": "g_cust_degree_dev",
@@ -904,27 +1120,27 @@
     {
       "name": "g_cd_cos",
       "block": "graph",
-      "single_feature_ap_train": 0.04605746463844882
+      "single_feature_ap_train": 0.04590813371843201
     },
     {
       "name": "g_cm_cos",
       "block": "graph",
-      "single_feature_ap_train": 0.02094605947267244
+      "single_feature_ap_train": 0.020956918228977467
     },
     {
       "name": "g_cust_emb_drift",
       "block": "graph",
-      "single_feature_ap_train": 0.01813977085517232
+      "single_feature_ap_train": 0.018345593866066788
     },
     {
       "name": "g_cust_emb_norm",
       "block": "graph",
-      "single_feature_ap_train": 0.018738486722717475
+      "single_feature_ap_train": 0.01874405368566036
     },
     {
       "name": "g_dev_emb_norm",
       "block": "graph",
-      "single_feature_ap_train": 0.0496103958982614
+      "single_feature_ap_train": 0.04961482866765604
     },
     {
       "name": "g_same_component",
@@ -979,22 +1195,22 @@
     {
       "name": "gnn_cd_cos",
       "block": "graph",
-      "single_feature_ap_train": 0.05345804304252267
+      "single_feature_ap_train": 0.05345804359173385
     },
     {
       "name": "gnn_cd_score",
       "block": "graph",
-      "single_feature_ap_train": 0.051367741682185095
+      "single_feature_ap_train": 0.05136774595279539
     },
     {
       "name": "gnn_cust_emb_drift",
       "block": "graph",
-      "single_feature_ap_train": 0.01784348105939143
+      "single_feature_ap_train": 0.017843473809438744
     },
     {
       "name": "gnn_cm_cos",
       "block": "graph",
-      "single_feature_ap_train": 0.020071429010222845
+      "single_feature_ap_train": 0.020071428780330174
     },
     {
       "name": "g_comp_size_frac",

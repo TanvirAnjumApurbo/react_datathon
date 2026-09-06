@@ -1,0 +1,27 @@
+{
+  "objective": "mean",
+  "strategy": "equal_all",
+  "weights": {
+    "cat_base": 0.0625,
+    "hl_14d": 0.0625,
+    "hl_21d": 0.0625,
+    "hl_45d": 0.0625,
+    "hl_7d": 0.0625,
+    "hl_90d": 0.0625,
+    "lgb_base": 0.0625,
+    "lgb_deep": 0.0625,
+    "lgb_extra": 0.0625,
+    "lgb_reg": 0.0625,
+    "lgb_shallow": 0.0625,
+    "win_120d": 0.0625,
+    "win_45d": 0.0625,
+    "win_90d": 0.0625,
+    "xgb_base": 0.0625,
+    "xgb_shallow": 0.0625
+  },
+  "postprocess": null,
+  "tail_late_ap": 0.5529,
+  "tail_recent_ap": 0.563,
+  "tail_far_ap": null,
+  "note": "Equal weight over every member of every family. Statistically tied with equal_lgb_all (objective 0.5579 vs 0.5580); submitted to test whether the three-family diversity is worth anything the leaderboard can see."
+}

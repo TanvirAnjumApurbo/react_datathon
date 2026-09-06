@@ -1,0 +1,34 @@
+{
+  "name": "s2_pipeline_equal_lgb",
+  "note": "Stage 0/1 feature set (243 cols, 7d encoder feedback delay) with the corrected disjoint early-stopping window; equal-weight blend of 5 LightGBM configs, 2 seeds each. Control submission: does the rebuilt pipeline move the LB off 0.52708, and does tail_late keep tracking it?",
+  "spec": "G:\\REACT_datathon\\data\\processed\\blend_spec_v2.json",
+  "weights": {
+    "lgb_base": 0.2,
+    "lgb_deep": 0.2,
+    "lgb_shallow": 0.2,
+    "lgb_reg": 0.2,
+    "lgb_extra": 0.2
+  },
+  "seeds": 2,
+  "postprocess": null,
+  "members": [
+    "lgb_base_s0",
+    "lgb_base_s1",
+    "lgb_deep_s0",
+    "lgb_deep_s1",
+    "lgb_shallow_s0",
+    "lgb_shallow_s1",
+    "lgb_reg_s0",
+    "lgb_reg_s1",
+    "lgb_extra_s0",
+    "lgb_extra_s1"
+  ],
+  "local": {
+    "tail_late_ap": 0.5507255809217165,
+    "tail_recent_ap": 0.5615479396208968,
+    "strategy": "equal_lgb"
+  },
+  "n_features": 243,
+  "te_feedback_delay_d": 7.0,
+  "use_signup_inconsistency": false
+}

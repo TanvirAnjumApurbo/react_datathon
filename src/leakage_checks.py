@@ -28,10 +28,28 @@ def check_no_banned_columns(features: pd.DataFrame) -> None:
     if bad:
         raise LeakageError(f"banned columns present in feature matrix: {bad}")
 
+    # Two blocks emitting the same column name is not a leak, but it is a
+    # silent corruption: `features[col]` then returns a DataFrame, every
+    # downstream per-column check crashes or -- worse -- skips, and the model
+    # trains on whichever copy pandas hands it. Two modules independently
+    # arrived at `cust_amt_mean_24h` here, so this is a real failure mode and
+    # not a hypothetical.
+    dup = features.columns[features.columns.duplicated()].unique().tolist()
+    if dup:
+        raise LeakageError(f"duplicate column names in feature matrix: {sorted(dup)}")
+
+    # Substring match for the words that only ever appear in a label or an
+    # absolute-time column. `_y` gets a stricter rule: as a bare substring it
+    # matches innocent names -- `is_young_account` tripped it -- so it is
+    # checked as a whole name or a suffix, which is how the label column
+    # actually shows up when one leaks in (`y`, `_y`, `val_y`).
+    tokens = ("fraud", "target", "label", "epoch")
     suspicious = [
         c
         for c in features.columns
-        if any(t in c.lower() for t in ("fraud", "target", "label", "_y", "epoch"))
+        if any(t in c.lower() for t in tokens)
+        or c.lower() in ("y", "_y")
+        or c.lower().endswith("_y")
     ]
     if suspicious:
         raise LeakageError(f"columns with target/time-like names: {suspicious}")

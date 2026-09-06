@@ -76,6 +76,23 @@ def build(df: pd.DataFrame) -> pd.DataFrame:
         prior_total > 0, prior_same_hour / np.maximum(prior_total, 1), np.nan
     )
 
+    # --- field-was-absent flags -------------------------------------------
+    # `io_utils.clean_stream` computes these and then fills the categoricals
+    # with an explicit `__NA__` level -- but nothing was carrying them into the
+    # model matrix, so "missingness itself is predictive" was an assumption the
+    # model was never given a chance to use. Passing them through is free and
+    # makes the claim measurable.
+    #
+    # The measurement, for the record, says it is not: fraud rates on absent
+    # rows are 0.0199 / 0.0193 / 0.0170 against a 0.0176 base, so location's
+    # flag points the *wrong* way and the other two carry ~1.1x lift. That is
+    # what MCAR looks like. Kept anyway because they cost nothing and the
+    # ablation can drop them on evidence.
+    for col in C.NULLABLE_CATS:
+        flag = f"{col}_was_missing"
+        if flag in df.columns:
+            out[flag] = df[flag].to_numpy().astype(np.int8)
+
     # --- account tenure ---------------------------------------------------
     out["account_age_days"] = df["account_age_days"].to_numpy().astype(np.float64)
     out["account_age_log"] = np.log1p(out["account_age_days"].to_numpy())

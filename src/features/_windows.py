@@ -81,6 +81,33 @@ class WindowIndex:
         out = prefix[idx] - prefix[lo]
         return out[self.inv]
 
+    def sum_before_lag(self, values: np.ndarray, lag_s: int) -> np.ndarray:
+        """Sum of `values` over same-key rows at time <= t - `lag_s`.
+
+        The mirror image of `sum_in_window`: that one keeps a trailing window
+        ending at the current row, this one keeps *everything* up to a point
+        `lag_s` seconds in the past and discards the recent tail.
+
+        This is what a feedback delay needs. A fraud label does not exist when
+        the transaction happens -- it exists once an investigation confirms it
+        -- so a statistic that consumes labels must read only the part of
+        history old enough to have been adjudicated. The ULB handbook builds
+        the same band by subtracting two nested rolling windows; here the
+        composite-key search resolves it directly, and `lag_s = 0` reduces to
+        the ordinary strictly-past expanding sum.
+        """
+        v = np.asarray(values, dtype=np.float64)[self.order]
+        prefix = np.concatenate([[0.0], np.cumsum(v)])
+        if lag_s <= 0:
+            hi = np.arange(self.n, dtype=np.int64)
+        else:
+            # First same-key row with ts > t - lag_s; everything before it is
+            # at ts <= t - lag_s, which is exactly the admissible history.
+            target = self.g_sorted * _BIG + (self.t_sorted - np.int64(lag_s))
+            hi = np.searchsorted(self.composite, target, side="right")
+        out = prefix[hi] - prefix[self.group_start]
+        return out[self.inv]
+
     def prev_gap(self, lag: int = 1) -> np.ndarray:
         """Seconds since this key's `lag`-th previous occurrence (NaN if none)."""
         prev = np.full(self.n, np.nan)

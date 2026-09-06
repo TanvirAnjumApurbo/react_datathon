@@ -27,13 +27,16 @@ import pandas as pd
 from src import config as C
 from src import leakage_checks as LC
 from src.io_utils import get_stream
-from src.features import amount, encoding, entity, graph, temporal, velocity
+from src.features import (
+    amount, behaviour, encoding, entity, graph, temporal, velocity,
+)
 
 BLOCKS = {
     "temporal": temporal.build,
     "amount": amount.build,
     "velocity": velocity.build,
     "entity": entity.build,
+    "behaviour": behaviour.build,
     "encoding": encoding.build,
 }
 
@@ -44,8 +47,9 @@ def build_matrix(df: pd.DataFrame, use_gnn: bool = True, verbose: bool = True) -
         t = time.time()
         block = fn(df)
         parts.append(block)
+        sub = block.attrs.get("subblock", {})
         for c in block.columns:
-            provenance[c] = name
+            provenance[c] = f"{name}:{sub[c]}" if c in sub else name
         if verbose:
             print(f"  {name:9s} {block.shape[1]:3d} cols  {time.time()-t:6.1f}s", flush=True)
 
@@ -71,7 +75,13 @@ def build_matrix_no_labels(df: pd.DataFrame) -> pd.DataFrame:
     `fit_cutoff`, and the graph via its snapshot construction.
     """
     return pd.concat(
-        [temporal.build(df), amount.build(df), velocity.build(df), entity.build(df)],
+        [
+            temporal.build(df),
+            amount.build(df),
+            velocity.build(df),
+            entity.build(df),
+            behaviour.build(df),
+        ],
         axis=1,
     )
 
@@ -126,6 +136,7 @@ def main() -> None:
         "n_train": int((~is_test).sum()),
         "n_test": int(is_test.sum()),
         "te_fit_cutoff": str(C.TRAIN_END),
+        "te_feedback_delay_d": C.TE_FEEDBACK_DELAY_D,
         "graph_snapshot_freq": C.GRAPH_SNAPSHOT_FREQ,
         "gnn_enabled": not args.no_gnn,
         "features": [

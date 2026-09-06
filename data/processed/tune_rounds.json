@@ -1,0 +1,254 @@
+{
+  "lgb_base": {
+    "kind": "lgb",
+    "params": {
+      "learning_rate": 0.05,
+      "num_leaves": 64,
+      "min_data_in_leaf": 100,
+      "feature_fraction": 0.7,
+      "bagging_fraction": 0.8,
+      "bagging_freq": 1,
+      "lambda_l2": 5.0
+    },
+    "halflife": null,
+    "train_days": null,
+    "rounds": 203,
+    "n_train": 491877
+  },
+  "lgb_deep": {
+    "kind": "lgb",
+    "params": {
+      "learning_rate": 0.03,
+      "num_leaves": 255,
+      "min_data_in_leaf": 50,
+      "feature_fraction": 0.6,
+      "bagging_fraction": 0.8,
+      "bagging_freq": 1,
+      "lambda_l2": 10.0
+    },
+    "halflife": null,
+    "train_days": null,
+    "rounds": 230,
+    "n_train": 491877
+  },
+  "lgb_shallow": {
+    "kind": "lgb",
+    "params": {
+      "learning_rate": 0.05,
+      "num_leaves": 31,
+      "min_data_in_leaf": 200,
+      "feature_fraction": 0.8,
+      "bagging_fraction": 0.9,
+      "bagging_freq": 1,
+      "lambda_l2": 1.0
+    },
+    "halflife": null,
+    "train_days": null,
+    "rounds": 494,
+    "n_train": 491877
+  },
+  "lgb_reg": {
+    "kind": "lgb",
+    "params": {
+      "learning_rate": 0.04,
+      "num_leaves": 48,
+      "min_data_in_leaf": 300,
+      "feature_fraction": 0.5,
+      "bagging_fraction": 0.7,
+      "bagging_freq": 1,
+      "lambda_l1": 5.0,
+      "lambda_l2": 10.0
+    },
+    "halflife": null,
+    "train_days": null,
+    "rounds": 404,
+    "n_train": 491877
+  },
+  "lgb_extra": {
+    "kind": "lgb",
+    "params": {
+      "learning_rate": 0.05,
+      "num_leaves": 64,
+      "min_data_in_leaf": 100,
+      "feature_fraction": 0.6,
+      "bagging_fraction": 0.8,
+      "bagging_freq": 1,
+      "lambda_l2": 5.0,
+      "extra_trees": true
+    },
+    "halflife": null,
+    "train_days": null,
+    "rounds": 482,
+    "n_train": 491877
+  },
+  "hl_7d": {
+    "kind": "lgb",
+    "params": {
+      "learning_rate": 0.05,
+      "num_leaves": 64,
+      "min_data_in_leaf": 100,
+      "feature_fraction": 0.7,
+      "bagging_fraction": 0.8,
+      "bagging_freq": 1,
+      "lambda_l2": 5.0
+    },
+    "halflife": 7.0,
+    "train_days": null,
+    "rounds": 203,
+    "n_train": 491877
+  },
+  "hl_14d": {
+    "kind": "lgb",
+    "params": {
+      "learning_rate": 0.05,
+      "num_leaves": 64,
+      "min_data_in_leaf": 100,
+      "feature_fraction": 0.7,
+      "bagging_fraction": 0.8,
+      "bagging_freq": 1,
+      "lambda_l2": 5.0
+    },
+    "halflife": 14.0,
+    "train_days": null,
+    "rounds": 113,
+    "n_train": 491877
+  },
+  "hl_21d": {
+    "kind": "lgb",
+    "params": {
+      "learning_rate": 0.05,
+      "num_leaves": 64,
+      "min_data_in_leaf": 100,
+      "feature_fraction": 0.7,
+      "bagging_fraction": 0.8,
+      "bagging_freq": 1,
+      "lambda_l2": 5.0
+    },
+    "halflife": 21.0,
+    "train_days": null,
+    "rounds": 176,
+    "n_train": 491877
+  },
+  "hl_45d": {
+    "kind": "lgb",
+    "params": {
+      "learning_rate": 0.05,
+      "num_leaves": 64,
+      "min_data_in_leaf": 100,
+      "feature_fraction": 0.7,
+      "bagging_fraction": 0.8,
+      "bagging_freq": 1,
+      "lambda_l2": 5.0
+    },
+    "halflife": 45.0,
+    "train_days": null,
+    "rounds": 112,
+    "n_train": 491877
+  },
+  "hl_90d": {
+    "kind": "lgb",
+    "params": {
+      "learning_rate": 0.05,
+      "num_leaves": 64,
+      "min_data_in_leaf": 100,
+      "feature_fraction": 0.7,
+      "bagging_fraction": 0.8,
+      "bagging_freq": 1,
+      "lambda_l2": 5.0
+    },
+    "halflife": 90.0,
+    "train_days": null,
+    "rounds": 150,
+    "n_train": 491877
+  },
+  "win_45d": {
+    "kind": "lgb",
+    "params": {
+      "learning_rate": 0.05,
+      "num_leaves": 64,
+      "min_data_in_leaf": 100,
+      "feature_fraction": 0.7,
+      "bagging_fraction": 0.8,
+      "bagging_freq": 1,
+      "lambda_l2": 5.0
+    },
+    "halflife": null,
+    "train_days": 45,
+    "rounds": 112,
+    "n_train": 169230
+  },
+  "win_90d": {
+    "kind": "lgb",
+    "params": {
+      "learning_rate": 0.05,
+      "num_leaves": 64,
+      "min_data_in_leaf": 100,
+      "feature_fraction": 0.7,
+      "bagging_fraction": 0.8,
+      "bagging_freq": 1,
+      "lambda_l2": 5.0
+    },
+    "halflife": null,
+    "train_days": 90,
+    "rounds": 174,
+    "n_train": 333403
+  },
+  "win_120d": {
+    "kind": "lgb",
+    "params": {
+      "learning_rate": 0.05,
+      "num_leaves": 64,
+      "min_data_in_leaf": 100,
+      "feature_fraction": 0.7,
+      "bagging_fraction": 0.8,
+      "bagging_freq": 1,
+      "lambda_l2": 5.0
+    },
+    "halflife": null,
+    "train_days": 120,
+    "rounds": 181,
+    "n_train": 441565
+  },
+  "xgb_base": {
+    "kind": "xgb",
+    "params": {
+      "learning_rate": 0.05,
+      "max_depth": 8,
+      "min_child_weight": 5,
+      "subsample": 0.8,
+      "colsample_bytree": 0.7,
+      "reg_lambda": 5.0
+    },
+    "halflife": null,
+    "train_days": null,
+    "rounds": 177,
+    "n_train": 491877
+  },
+  "xgb_shallow": {
+    "kind": "xgb",
+    "params": {
+      "learning_rate": 0.03,
+      "max_depth": 5,
+      "min_child_weight": 10,
+      "subsample": 0.8,
+      "colsample_bytree": 0.6,
+      "reg_lambda": 10.0
+    },
+    "halflife": null,
+    "train_days": null,
+    "rounds": 1040,
+    "n_train": 491877
+  },
+  "cat_base": {
+    "kind": "cat",
+    "params": {
+      "learning_rate": 0.05,
+      "depth": 8,
+      "l2_leaf_reg": 5.0
+    },
+    "halflife": null,
+    "train_days": null,
+    "rounds": 855,
+    "n_train": 491877
+  }
+}

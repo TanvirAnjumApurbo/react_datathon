@@ -32,6 +32,7 @@ import pandas as pd
 from scipy.stats import rankdata
 
 from src import config as C
+from src import harness as H
 from src import validation as V
 from src.io_utils import get_stream
 from src.features import amount, encoding, entity, graph, temporal, velocity
@@ -47,26 +48,14 @@ SUBMISSION = C.ROOT / "submission.csv"
 # data
 # --------------------------------------------------------------------------
 def load_base(df: pd.DataFrame, use_gnn: bool = True) -> pd.DataFrame:
-    """Label-free feature matrix, cached (it costs ~2 min to rebuild)."""
-    if BASE_CACHE.exists():
-        base = pd.read_parquet(BASE_CACHE)
-        if len(base) == len(df):
-            print(f"  loaded cached base features {base.shape}")
-            return base
-    parts = []
-    for name, fn in [
-        ("temporal", temporal.build),
-        ("amount", amount.build),
-        ("velocity", velocity.build),
-        ("entity", entity.build),
-        ("graph", lambda d: graph.build(d, use_gnn=use_gnn, verbose=False)),
-    ]:
-        t = time.time()
-        parts.append(fn(df))
-        print(f"  {name:9s} {parts[-1].shape[1]:3d} cols {time.time()-t:6.1f}s", flush=True)
-    base = pd.concat(parts, axis=1)
-    base.to_parquet(BASE_CACHE, index=False)
-    return base
+    """Label-free feature matrix, cached.
+
+    Delegates to `harness.load_base`, which keys the cache on a digest of the
+    feature-module sources as well as the row count. Editing a feature module
+    and forgetting to delete the parquet used to mean silently training on the
+    previous feature set; now it just rebuilds.
+    """
+    return H.load_base(df, use_gnn=use_gnn)
 
 
 def recency_weights(ts: pd.Series, mask: np.ndarray, cutoff, halflife_d: float | None):

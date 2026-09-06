@@ -25,7 +25,9 @@ import pandas as pd
 from src import config as C
 from src import validation as V
 from src.io_utils import get_stream
-from src.features import amount, encoding, entity, graph, temporal, velocity
+from src.features import (
+    amount, behaviour, encoding, entity, graph, temporal, velocity,
+)
 
 PARAMS = dict(
     objective="binary",
@@ -62,6 +64,7 @@ def main() -> None:
         ("amount", amount.build),
         ("velocity", velocity.build),
         ("entity", entity.build),
+        ("behaviour", behaviour.build),
         ("graph", lambda d: graph.build(d, use_gnn=not args.no_gnn, verbose=False)),
     ]:
         blk = fn(df)

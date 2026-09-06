@@ -10,11 +10,23 @@ The real task geometry is: train on everything up to a cutoff, then score a
 **62-day forward block** starting the very next day (test runs 2026-07-16 to
 2026-09-15, immediately after the 2026-07-15 train cutoff, with no gap).
 
-`PRIMARY_FOLD` reproduces that geometry exactly and is the only fold used for
-model selection. The secondary walk-forward folds exist to measure *stability*
-across time -- given the organisers' explicit drift warning and the 60/40
-public/private split, a feature set that scores slightly lower but varies less
-across folds is the better bet.
+`PRIMARY_FOLD` reproduces that geometry exactly. It is **no longer the
+selection target**: submission 1 scored 0.7252 on it and 0.52708 on the public
+leaderboard, because its 62-day window averages six weeks of one fraud regime
+together with two weeks of the next.
+
+Selection now happens on the **tail folds** (`tail_late`, `tail_recent`), which
+score only 2026-06-29 -> 07-15 -- the newest labelled regime, the one the test
+period sits inside. `tail_late` shares `primary_62d`'s cutoff, so it is a free
+second read on the same trained model; it scored 0.516 against an LB of 0.527
+and is the only slice that has tracked reality. `tail_recent` moves the cutoff
+up to the day before the window, which is the only geometry that can see
+recency adaptation working.
+
+The secondary walk-forward folds exist to measure *stability* across time --
+given the organisers' explicit drift warning and the 60/40 public/private
+split, a feature set that scores slightly lower but varies less across folds is
+the better bet.
 
 Purging: every feature in this pipeline is strictly past-only, so a training
 row never sees validation data, and a validation row using train-period history
@@ -59,12 +71,95 @@ def primary_fold() -> Fold:
     return Fold(**C.PRIMARY_FOLD)
 
 
+def tail_late_fold() -> Fold:
+    """The LB-tracking slice: 46-62 days ahead, newest regime.
+
+    Same cutoff as `primary_62d`, so a model already fitted for the primary
+    fold can be scored on this one at zero extra training cost -- just a
+    different validation mask. Use `Fold.val_mask` on the same predictions.
+    """
+    return Fold(**C.TAIL_LATE_FOLD)
+
+
+def tail_recent_fold() -> Fold:
+    """Same rows as `tail_late`, but trained right up to the day before.
+
+    Short horizon, matched regime. This is the fold that can answer "does
+    adapting to recent data help", which `primary_62d` structurally cannot.
+    """
+    return Fold(**C.TAIL_RECENT_FOLD)
+
+
+def tail_far_fold() -> Fold:
+    """Same rows again, 75-91 days ahead. A stress read, never a selection target.
+
+    Deliberately one step beyond the real task's 62-day maximum. Its use is as
+    a tie-breaker between configs that `tail_late` cannot separate: the far half
+    of the test window is the part `tail_late` measures least well, and a config
+    that degrades gracefully here is the safer bet for it.
+    """
+    return Fold(**C.TAIL_FAR_FOLD)
+
+
+def far_wide_fold() -> Fold:
+    """The 04-16 -> 06-28 window at the `tail_far` cutoff, for stopping only."""
+    return Fold(**C.FAR_WIDE_FOLD)
+
+
+def es_late_fold() -> Fold:
+    """The stopping window for the 2026-05-14 cutoff: 05-15 -> 06-28.
+
+    Deliberately ends the day before the tail begins. `primary_62d` cannot be
+    used for this even though it is wider, because `tail_late` is a *subset* of
+    it -- 1,068 of its 4,028 positives -- so stopping there would pick the round
+    count using the labels of the window being reported.
+    """
+    return Fold(**C.ES_LATE_FOLD)
+
+
+#: Cutoffs that have a dedicated stopping window, built to end the day before
+#: `TAIL_START` so it cannot overlap any tail window.
+_ES_BY_CUTOFF = {
+    C.ES_LATE_FOLD["train_end"]: es_late_fold,
+    C.FAR_WIDE_FOLD["train_end"]: far_wide_fold,
+}
+
+
+def stopping_fold(folds: list[Fold]) -> Fold:
+    """Which window to early-stop on, given the windows about to be reported.
+
+    Uses the registered window for this cutoff where one exists. Those windows
+    are constructed to be disjoint from every *tail* window -- the ones
+    selection actually happens on -- which is the property that matters. They
+    do overlap `primary_62d`, unavoidably: no window at the 05-14 cutoff can
+    stop a 62-day fold without touching it. That is accepted because
+    `primary_62d` is reported for continuity and is not selected on.
+
+    Falls back to the widest reported window where nothing is registered (the
+    walk-forward folds, each of which is alone at its cutoff and is a stability
+    read rather than a decision input).
+    """
+    fn = _ES_BY_CUTOFF.get(folds[0].train_end)
+    if fn is not None:
+        es = fn()
+        assert all(es.val_end < f.val_start or es.val_start > f.val_end
+                   for f in folds if f.name.startswith("tail_")), \
+            f"stopping window {es.name} overlaps a tail window"
+        return es
+    return max(folds, key=lambda f: f.horizon_days)
+
+
 def secondary_folds() -> list[Fold]:
     return [Fold(**f) for f in C.SECONDARY_FOLDS]
 
 
+def selection_folds() -> list[Fold]:
+    """The folds a decision may be made on. Believe the tail when they differ."""
+    return [tail_late_fold(), primary_fold()]
+
+
 def all_folds() -> list[Fold]:
-    return [primary_fold(), *secondary_folds()]
+    return [primary_fold(), tail_late_fold(), tail_recent_fold(), *secondary_folds()]
 
 
 def embargo_mask(ts: pd.Series, fold: Fold, seconds: int = C.EMBARGO_S) -> np.ndarray:
