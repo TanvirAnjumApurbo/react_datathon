@@ -1,0 +1,23 @@
+# Virtualenv
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Editor
+.vscode/
+.idea/
+
+# Competition data -- not redistributed. Download train.csv / test.csv /
+# sample_submission.csv from the Kaggle competition page into data/.
+data/*.csv
+
+# Built feature matrices and model caches (~800 MB, rebuilt by
+# `build_features.py`). The small provenance artefacts are kept -- see below.
+data/processed/*
+!data/processed/feature_manifest.json
+!data/processed/feature_gain.csv
+!data/processed/search_results.csv
+!data/processed/blend_spec.json

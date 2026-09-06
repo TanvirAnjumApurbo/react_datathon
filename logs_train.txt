@@ -1,0 +1,62 @@
+loading base features...
+  loaded cached base features (994590, 187)
+
+search on primary_62d: train=491,877 val=240,065 base=0.0168
+  lgb_base     val_AP=0.7217 ( 43.0x) rounds= 808   100s
+  lgb_deep     val_AP=0.7239 ( 43.1x) rounds=1360   232s
+  lgb_shallow  val_AP=0.7191 ( 42.9x) rounds=1283    91s
+  lgb_hl90     val_AP=0.7222 ( 43.0x) rounds= 618    87s
+  lgb_hl45     val_AP=0.7216 ( 43.0x) rounds= 479    75s
+  xgb_base     val_AP=0.7123 ( 42.5x) rounds= 233    61s
+  cat_base     val_AP=0.7088 ( 42.2x) rounds= 731   163s
+
+=== SEARCH RESULTS ===
+       name kind  halflife  val_ap  x_base  rounds  secs
+   lgb_deep  lgb       NaN  0.7239 43.1447    1360   232
+   lgb_hl90  lgb   90.0000  0.7222 43.0434     618    87
+   lgb_base  lgb       NaN  0.7217 43.0139     808   100
+   lgb_hl45  lgb   45.0000  0.7216 43.0085     479    75
+lgb_shallow  lgb       NaN  0.7191 42.8573    1283    91
+   xgb_base  xgb       NaN  0.7123 42.4551     233    61
+   cat_base  cat       NaN  0.7088 42.2433     731   163
+wrote G:\REACT_datathon\data\processed\search_results.csv and G:\REACT_datathon\data\processed\val_preds.parquet
+
+=== BLEND COMPARISON (primary_62d) ===
+  best single (lgb_deep    ) 0.7239 (43.1x)
+  equal-weight all families      0.7214 (43.0x)
+  equal-weight lgb only          0.7248 (43.2x)
+  hill-climb (37 members)        0.7252 (43.2x)
+
+  hill-climb weights:
+    lgb_deep     0.459
+    lgb_hl90     0.189
+    lgb_hl45     0.189
+    lgb_base     0.108
+    lgb_shallow  0.054
+
+chosen: hill_climb (val_AP=0.7252)  -> G:\REACT_datathon\data\processed\blend_spec.json
+
+blend strategy: hill_climb  (fold val_AP 0.7252)
+  lgb_deep_s0 w=0.459 rounds=1632   357s
+  lgb_deep_s1 w=0.459 rounds=1632   377s
+  lgb_deep_s2 w=0.459 rounds=1632   390s
+  lgb_hl90_s0 w=0.189 rounds= 741    98s
+  lgb_hl90_s1 w=0.189 rounds= 741    98s
+  lgb_hl90_s2 w=0.189 rounds= 741   100s
+  lgb_hl45_s0 w=0.189 rounds= 574    82s
+  lgb_hl45_s1 w=0.189 rounds= 574    79s
+  lgb_hl45_s2 w=0.189 rounds= 574    79s
+  lgb_base_s0 w=0.108 rounds= 969   109s
+  lgb_base_s1 w=0.108 rounds= 969   109s
+  lgb_base_s2 w=0.108 rounds= 969   108s
+  lgb_shallow_s0 w=0.054 rounds=1539   107s
+  lgb_shallow_s1 w=0.054 rounds=1539   109s
+  lgb_shallow_s2 w=0.054 rounds=1539   109s
+
+wrote G:\REACT_datathon\submission.csv  (262,648 rows, 15 models)
+transaction_id    fraud
+    T000731942 0.307845
+    T000731943 0.095213
+    T000731944 0.142586
+
+prediction distribution: mean=0.4997 p99=0.9899 max=1.0000

@@ -1,0 +1,1016 @@
+{
+  "n_features": 200,
+  "n_train": 731942,
+  "n_test": 262648,
+  "te_fit_cutoff": "2026-07-15 23:59:59",
+  "graph_snapshot_freq": "W",
+  "gnn_enabled": true,
+  "features": [
+    {
+      "name": "hour",
+      "block": "temporal",
+      "single_feature_ap_train": 0.05415647631630646
+    },
+    {
+      "name": "minute_of_day",
+      "block": "temporal",
+      "single_feature_ap_train": 0.05483263079361637
+    },
+    {
+      "name": "dayofweek",
+      "block": "temporal",
+      "single_feature_ap_train": 0.017707520541180206
+    },
+    {
+      "name": "day_of_month",
+      "block": "temporal",
+      "single_feature_ap_train": 0.018062600754085504
+    },
+    {
+      "name": "is_weekend",
+      "block": "temporal",
+      "single_feature_ap_train": 0.01783807595602495
+    },
+    {
+      "name": "hour_sin",
+      "block": "temporal",
+      "single_feature_ap_train": 0.02264327939472202
+    },
+    {
+      "name": "hour_cos",
+      "block": "temporal",
+      "single_feature_ap_train": 0.03142198918717655
+    },
+    {
+      "name": "dow_sin",
+      "block": "temporal",
+      "single_feature_ap_train": 0.018136582020465385
+    },
+    {
+      "name": "dow_cos",
+      "block": "temporal",
+      "single_feature_ap_train": 0.017682042339125705
+    },
+    {
+      "name": "is_night",
+      "block": "temporal",
+      "single_feature_ap_train": 0.0517313112097635
+    },
+    {
+      "name": "is_deep_night",
+      "block": "temporal",
+      "single_feature_ap_train": 0.04813854819484113
+    },
+    {
+      "name": "cust_time_concentration",
+      "block": "temporal",
+      "single_feature_ap_train": 0.018877367051636527
+    },
+    {
+      "name": "cust_ang_dev",
+      "block": "temporal",
+      "single_feature_ap_train": 0.031916803536338335
+    },
+    {
+      "name": "cust_ang_dev_weighted",
+      "block": "temporal",
+      "single_feature_ap_train": 0.021706209261765783
+    },
+    {
+      "name": "hour_volume_share",
+      "block": "temporal",
+      "single_feature_ap_train": 0.06443354820926285
+    },
+    {
+      "name": "account_age_days",
+      "block": "temporal",
+      "single_feature_ap_train": 0.018597871760612898
+    },
+    {
+      "name": "account_age_log",
+      "block": "temporal",
+      "single_feature_ap_train": 0.018597871760612898
+    },
+    {
+      "name": "days_since_signup",
+      "block": "temporal",
+      "single_feature_ap_train": 0.018597871760612898
+    },
+    {
+      "name": "amount_bdt",
+      "block": "amount",
+      "single_feature_ap_train": 0.3244717174912379
+    },
+    {
+      "name": "log_amount",
+      "block": "amount",
+      "single_feature_ap_train": 0.3244717144499045
+    },
+    {
+      "name": "cust_amt_prev_mean",
+      "block": "amount",
+      "single_feature_ap_train": 0.019590962666468682
+    },
+    {
+      "name": "cust_amt_prev_std",
+      "block": "amount",
+      "single_feature_ap_train": 0.018806615412059732
+    },
+    {
+      "name": "cust_amt_prev_max",
+      "block": "amount",
+      "single_feature_ap_train": 0.018182162907314482
+    },
+    {
+      "name": "amt_ratio_mean",
+      "block": "amount",
+      "single_feature_ap_train": 0.4208461231787103
+    },
+    {
+      "name": "amt_ratio_median",
+      "block": "amount",
+      "single_feature_ap_train": 0.4399498392984293
+    },
+    {
+      "name": "amt_ratio_max",
+      "block": "amount",
+      "single_feature_ap_train": 0.3129269675425904
+    },
+    {
+      "name": "amt_ratio_min",
+      "block": "amount",
+      "single_feature_ap_train": 0.35385337156894603
+    },
+    {
+      "name": "amt_z",
+      "block": "amount",
+      "single_feature_ap_train": 0.270014293184881
+    },
+    {
+      "name": "log_amt_ratio_mean",
+      "block": "amount",
+      "single_feature_ap_train": 0.4211343127739313
+    },
+    {
+      "name": "amt_ratio_last1",
+      "block": "amount",
+      "single_feature_ap_train": 0.34712827939027535
+    },
+    {
+      "name": "amt_ratio_last5",
+      "block": "amount",
+      "single_feature_ap_train": 0.40744481195962157
+    },
+    {
+      "name": "amt_ratio_last20",
+      "block": "amount",
+      "single_feature_ap_train": 0.4188498083845602
+    },
+    {
+      "name": "amt_ratio_mean_by_categ",
+      "block": "amount",
+      "single_feature_ap_train": 0.287079682048948
+    },
+    {
+      "name": "amt_z_by_categ",
+      "block": "amount",
+      "single_feature_ap_train": 0.1329657064584838
+    },
+    {
+      "name": "cust_categ_prior_n",
+      "block": "amount",
+      "single_feature_ap_train": 0.019360865005360595
+    },
+    {
+      "name": "amt_ratio_mean_by_type",
+      "block": "amount",
+      "single_feature_ap_train": 0.3468734375880479
+    },
+    {
+      "name": "amt_z_by_type",
+      "block": "amount",
+      "single_feature_ap_train": 0.16909575197540572
+    },
+    {
+      "name": "cust_type_prior_n",
+      "block": "amount",
+      "single_feature_ap_train": 0.018987417911761235
+    },
+    {
+      "name": "amt_ratio_mean_by_payme",
+      "block": "amount",
+      "single_feature_ap_train": 0.33954516086172215
+    },
+    {
+      "name": "amt_z_by_payme",
+      "block": "amount",
+      "single_feature_ap_train": 0.16146492452542877
+    },
+    {
+      "name": "cust_payme_prior_n",
+      "block": "amount",
+      "single_feature_ap_train": 0.01841805796697733
+    },
+    {
+      "name": "amt_rank_7d",
+      "block": "amount",
+      "single_feature_ap_train": 0.23618330641434265
+    },
+    {
+      "name": "amt_rank_30d",
+      "block": "amount",
+      "single_feature_ap_train": 0.2381186656349457
+    },
+    {
+      "name": "amt_is_int",
+      "block": "amount",
+      "single_feature_ap_train": 0.017607845000300344
+    },
+    {
+      "name": "amt_round_100",
+      "block": "amount",
+      "single_feature_ap_train": 0.017611392465142237
+    },
+    {
+      "name": "amt_round_1000",
+      "block": "amount",
+      "single_feature_ap_train": 0.01768009122960827
+    },
+    {
+      "name": "cust_prior_n",
+      "block": "velocity",
+      "single_feature_ap_train": 0.01774328728175929
+    },
+    {
+      "name": "cust_dt",
+      "block": "velocity",
+      "single_feature_ap_train": 0.029852318036945335
+    },
+    {
+      "name": "cust_log_dt",
+      "block": "velocity",
+      "single_feature_ap_train": 0.02985231808461778
+    },
+    {
+      "name": "cust_dt2",
+      "block": "velocity",
+      "single_feature_ap_train": 0.024052085036162907
+    },
+    {
+      "name": "cust_dt3",
+      "block": "velocity",
+      "single_feature_ap_train": 0.02126160605541725
+    },
+    {
+      "name": "cust_dt_vs_typical",
+      "block": "velocity",
+      "single_feature_ap_train": 0.0225435537038028
+    },
+    {
+      "name": "cust_n_1h",
+      "block": "velocity",
+      "single_feature_ap_train": 0.1675702380214863
+    },
+    {
+      "name": "cust_amt_sum_1h",
+      "block": "velocity",
+      "single_feature_ap_train": 0.13309590216622985
+    },
+    {
+      "name": "cust_amt_mean_1h",
+      "block": "velocity",
+      "single_feature_ap_train": 0.07404819838597515
+    },
+    {
+      "name": "cust_n_6h",
+      "block": "velocity",
+      "single_feature_ap_train": 0.15259371565405846
+    },
+    {
+      "name": "cust_amt_sum_6h",
+      "block": "velocity",
+      "single_feature_ap_train": 0.09872955616278002
+    },
+    {
+      "name": "cust_amt_mean_6h",
+      "block": "velocity",
+      "single_feature_ap_train": 0.045473402090452086
+    },
+    {
+      "name": "cust_n_24h",
+      "block": "velocity",
+      "single_feature_ap_train": 0.07173523816491599
+    },
+    {
+      "name": "cust_amt_sum_24h",
+      "block": "velocity",
+      "single_feature_ap_train": 0.05205224500959984
+    },
+    {
+      "name": "cust_amt_mean_24h",
+      "block": "velocity",
+      "single_feature_ap_train": 0.030580814042705837
+    },
+    {
+      "name": "cust_n_72h",
+      "block": "velocity",
+      "single_feature_ap_train": 0.02820568988749971
+    },
+    {
+      "name": "cust_amt_sum_72h",
+      "block": "velocity",
+      "single_feature_ap_train": 0.03111778475581589
+    },
+    {
+      "name": "cust_amt_mean_72h",
+      "block": "velocity",
+      "single_feature_ap_train": 0.024968200509497197
+    },
+    {
+      "name": "cust_n_168h",
+      "block": "velocity",
+      "single_feature_ap_train": 0.021856735631146942
+    },
+    {
+      "name": "cust_amt_sum_168h",
+      "block": "velocity",
+      "single_feature_ap_train": 0.0242020036332993
+    },
+    {
+      "name": "cust_amt_mean_168h",
+      "block": "velocity",
+      "single_feature_ap_train": 0.022647132651711407
+    },
+    {
+      "name": "cust_burst_1h_24h",
+      "block": "velocity",
+      "single_feature_ap_train": 0.05715863830359953
+    },
+    {
+      "name": "cust_burst_24h_168h",
+      "block": "velocity",
+      "single_feature_ap_train": 0.03417420699505612
+    },
+    {
+      "name": "cust_txn_per_day",
+      "block": "velocity",
+      "single_feature_ap_train": 0.017771202800859916
+    },
+    {
+      "name": "dev_prior_n",
+      "block": "velocity",
+      "single_feature_ap_train": 0.06341373654605688
+    },
+    {
+      "name": "dev_dt",
+      "block": "velocity",
+      "single_feature_ap_train": 0.1010407600974239
+    },
+    {
+      "name": "dev_log_dt",
+      "block": "velocity",
+      "single_feature_ap_train": 0.10104076008380347
+    },
+    {
+      "name": "dev_dt2",
+      "block": "velocity",
+      "single_feature_ap_train": 0.06576653696418883
+    },
+    {
+      "name": "dev_dt3",
+      "block": "velocity",
+      "single_feature_ap_train": 0.05003683157551041
+    },
+    {
+      "name": "dev_dt_vs_typical",
+      "block": "velocity",
+      "single_feature_ap_train": 0.0634410982645504
+    },
+    {
+      "name": "dev_n_1h",
+      "block": "velocity",
+      "single_feature_ap_train": 0.1600205066026034
+    },
+    {
+      "name": "dev_amt_sum_1h",
+      "block": "velocity",
+      "single_feature_ap_train": 0.13195851138980094
+    },
+    {
+      "name": "dev_amt_mean_1h",
+      "block": "velocity",
+      "single_feature_ap_train": 0.08096972974429852
+    },
+    {
+      "name": "dev_n_6h",
+      "block": "velocity",
+      "single_feature_ap_train": 0.1490759595974976
+    },
+    {
+      "name": "dev_amt_sum_6h",
+      "block": "velocity",
+      "single_feature_ap_train": 0.1175006420288716
+    },
+    {
+      "name": "dev_amt_mean_6h",
+      "block": "velocity",
+      "single_feature_ap_train": 0.04556062490941325
+    },
+    {
+      "name": "dev_n_24h",
+      "block": "velocity",
+      "single_feature_ap_train": 0.09199590098199646
+    },
+    {
+      "name": "dev_amt_sum_24h",
+      "block": "velocity",
+      "single_feature_ap_train": 0.08557629711877565
+    },
+    {
+      "name": "dev_amt_mean_24h",
+      "block": "velocity",
+      "single_feature_ap_train": 0.029644767053458143
+    },
+    {
+      "name": "dev_n_168h",
+      "block": "velocity",
+      "single_feature_ap_train": 0.023652673644485343
+    },
+    {
+      "name": "dev_amt_sum_168h",
+      "block": "velocity",
+      "single_feature_ap_train": 0.03215294701850696
+    },
+    {
+      "name": "dev_amt_mean_168h",
+      "block": "velocity",
+      "single_feature_ap_train": 0.02465839848050921
+    },
+    {
+      "name": "dev_burst_1h_24h",
+      "block": "velocity",
+      "single_feature_ap_train": 0.038155043398425986
+    },
+    {
+      "name": "merch_prior_n",
+      "block": "velocity",
+      "single_feature_ap_train": 0.03361206591316611
+    },
+    {
+      "name": "merch_dt",
+      "block": "velocity",
+      "single_feature_ap_train": 0.021571174132057735
+    },
+    {
+      "name": "merch_log_dt",
+      "block": "velocity",
+      "single_feature_ap_train": 0.021571170193616065
+    },
+    {
+      "name": "merch_n_1h",
+      "block": "velocity",
+      "single_feature_ap_train": 0.021284178917657125
+    },
+    {
+      "name": "merch_n_24h",
+      "block": "velocity",
+      "single_feature_ap_train": 0.022413949341454697
+    },
+    {
+      "name": "loc_prior_n",
+      "block": "velocity",
+      "single_feature_ap_train": 0.025805211105539152
+    },
+    {
+      "name": "loc_dt",
+      "block": "velocity",
+      "single_feature_ap_train": 0.03701823569430923
+    },
+    {
+      "name": "loc_log_dt",
+      "block": "velocity",
+      "single_feature_ap_train": 0.03701823569430923
+    },
+    {
+      "name": "loc_n_1h",
+      "block": "velocity",
+      "single_feature_ap_train": 0.03294646715472054
+    },
+    {
+      "name": "loc_n_24h",
+      "block": "velocity",
+      "single_feature_ap_train": 0.028761055447558685
+    },
+    {
+      "name": "custdev_prior_n",
+      "block": "velocity",
+      "single_feature_ap_train": 0.04220976396727386
+    },
+    {
+      "name": "custdev_dt",
+      "block": "velocity",
+      "single_feature_ap_train": 0.0497406820653924
+    },
+    {
+      "name": "custdev_n_24h",
+      "block": "velocity",
+      "single_feature_ap_train": 0.0337973558446224
+    },
+    {
+      "name": "custdev_share_24h",
+      "block": "velocity",
+      "single_feature_ap_train": 0.01903333460026154
+    },
+    {
+      "name": "cust_new_dev",
+      "block": "entity",
+      "single_feature_ap_train": 0.04592660092846331
+    },
+    {
+      "name": "cust_dev_prior_n",
+      "block": "entity",
+      "single_feature_ap_train": 0.04220976396727386
+    },
+    {
+      "name": "cust_dev_dt",
+      "block": "entity",
+      "single_feature_ap_train": 0.0497406820653924
+    },
+    {
+      "name": "cust_dev_share",
+      "block": "entity",
+      "single_feature_ap_train": 0.042566373097079564
+    },
+    {
+      "name": "cust_new_merch",
+      "block": "entity",
+      "single_feature_ap_train": 0.019930544080981764
+    },
+    {
+      "name": "cust_merch_prior_n",
+      "block": "entity",
+      "single_feature_ap_train": 0.020907005920793944
+    },
+    {
+      "name": "cust_merch_dt",
+      "block": "entity",
+      "single_feature_ap_train": 0.022353900157496862
+    },
+    {
+      "name": "cust_merch_share",
+      "block": "entity",
+      "single_feature_ap_train": 0.020375760756323143
+    },
+    {
+      "name": "cust_new_loc",
+      "block": "entity",
+      "single_feature_ap_train": 0.03259420005595933
+    },
+    {
+      "name": "cust_loc_prior_n",
+      "block": "entity",
+      "single_feature_ap_train": 0.032056156167201984
+    },
+    {
+      "name": "cust_loc_dt",
+      "block": "entity",
+      "single_feature_ap_train": 0.041446057338843975
+    },
+    {
+      "name": "cust_loc_share",
+      "block": "entity",
+      "single_feature_ap_train": 0.030372930078335185
+    },
+    {
+      "name": "cust_new_dtype",
+      "block": "entity",
+      "single_feature_ap_train": 0.03398995419818897
+    },
+    {
+      "name": "cust_dtype_prior_n",
+      "block": "entity",
+      "single_feature_ap_train": 0.03240111885049316
+    },
+    {
+      "name": "cust_dtype_dt",
+      "block": "entity",
+      "single_feature_ap_train": 0.04025216618823362
+    },
+    {
+      "name": "cust_dtype_share",
+      "block": "entity",
+      "single_feature_ap_train": 0.03462032158669149
+    },
+    {
+      "name": "cust_new_mcat",
+      "block": "entity",
+      "single_feature_ap_train": 0.018418256410028276
+    },
+    {
+      "name": "cust_mcat_prior_n",
+      "block": "entity",
+      "single_feature_ap_train": 0.019360865005360595
+    },
+    {
+      "name": "cust_mcat_dt",
+      "block": "entity",
+      "single_feature_ap_train": 0.021208353242796105
+    },
+    {
+      "name": "cust_mcat_share",
+      "block": "entity",
+      "single_feature_ap_train": 0.01899321604830196
+    },
+    {
+      "name": "cust_new_pay",
+      "block": "entity",
+      "single_feature_ap_train": 0.01773031410170193
+    },
+    {
+      "name": "cust_pay_prior_n",
+      "block": "entity",
+      "single_feature_ap_train": 0.01841805796697733
+    },
+    {
+      "name": "cust_pay_dt",
+      "block": "entity",
+      "single_feature_ap_train": 0.020004367257291544
+    },
+    {
+      "name": "cust_pay_share",
+      "block": "entity",
+      "single_feature_ap_train": 0.018359743867714905
+    },
+    {
+      "name": "cust_new_ttype",
+      "block": "entity",
+      "single_feature_ap_train": 0.017869767468356595
+    },
+    {
+      "name": "cust_ttype_prior_n",
+      "block": "entity",
+      "single_feature_ap_train": 0.018987417911761235
+    },
+    {
+      "name": "cust_ttype_dt",
+      "block": "entity",
+      "single_feature_ap_train": 0.02036747123173529
+    },
+    {
+      "name": "cust_ttype_share",
+      "block": "entity",
+      "single_feature_ap_train": 0.019027634287535306
+    },
+    {
+      "name": "dev_prior_ncust",
+      "block": "entity",
+      "single_feature_ap_train": 0.05936598086645088
+    },
+    {
+      "name": "dev_prior_nloc",
+      "block": "entity",
+      "single_feature_ap_train": 0.06123380873858703
+    },
+    {
+      "name": "dev_new_cust_24h",
+      "block": "entity",
+      "single_feature_ap_train": 0.10168635527881396
+    },
+    {
+      "name": "dev_new_cust_168h",
+      "block": "entity",
+      "single_feature_ap_train": 0.07431754722816543
+    },
+    {
+      "name": "dev_cust_churn",
+      "block": "entity",
+      "single_feature_ap_train": 0.06173756098637697
+    },
+    {
+      "name": "merch_prior_ncust",
+      "block": "entity",
+      "single_feature_ap_train": 0.03246210499968999
+    },
+    {
+      "name": "merch_prior_ndev",
+      "block": "entity",
+      "single_feature_ap_train": 0.03448442970436311
+    },
+    {
+      "name": "cust_prior_ndev",
+      "block": "entity",
+      "single_feature_ap_train": 0.018136707343713424
+    },
+    {
+      "name": "cust_prior_nmerch",
+      "block": "entity",
+      "single_feature_ap_train": 0.01749483931875645
+    },
+    {
+      "name": "cust_prior_nloc",
+      "block": "entity",
+      "single_feature_ap_train": 0.018596731373224918
+    },
+    {
+      "name": "cust_prior_nmcat",
+      "block": "entity",
+      "single_feature_ap_train": 0.01750591054217973
+    },
+    {
+      "name": "cust_new_dev_24h",
+      "block": "entity",
+      "single_feature_ap_train": 0.09018289883094305
+    },
+    {
+      "name": "cust_new_loc_24h",
+      "block": "entity",
+      "single_feature_ap_train": 0.01874853598794133
+    },
+    {
+      "name": "cust_new_dev_168h",
+      "block": "entity",
+      "single_feature_ap_train": 0.0288292507601621
+    },
+    {
+      "name": "cust_new_loc_168h",
+      "block": "entity",
+      "single_feature_ap_train": 0.017943019208069545
+    },
+    {
+      "name": "cust_dev_per_txn",
+      "block": "entity",
+      "single_feature_ap_train": 0.019468099773409988
+    },
+    {
+      "name": "loc_changed_vs_prev",
+      "block": "entity",
+      "single_feature_ap_train": 0.02433551129877295
+    },
+    {
+      "name": "time_since_loc_change",
+      "block": "entity",
+      "single_feature_ap_train": 0.020330995408525402
+    },
+    {
+      "name": "dev_age_days",
+      "block": "entity",
+      "single_feature_ap_train": 0.06461048812620536
+    },
+    {
+      "name": "dev_age_frac",
+      "block": "entity",
+      "single_feature_ap_train": 0.066762580768325
+    },
+    {
+      "name": "dev_is_first_seen",
+      "block": "entity",
+      "single_feature_ap_train": 0.05645692854086044
+    },
+    {
+      "name": "merch_age_days",
+      "block": "entity",
+      "single_feature_ap_train": 0.023353817287025895
+    },
+    {
+      "name": "merch_age_frac",
+      "block": "entity",
+      "single_feature_ap_train": 0.039329929929896076
+    },
+    {
+      "name": "merch_is_first_seen",
+      "block": "entity",
+      "single_feature_ap_train": 0.01844848933843789
+    },
+    {
+      "name": "cust_stream_age_days",
+      "block": "entity",
+      "single_feature_ap_train": 0.01849718477308955
+    },
+    {
+      "name": "cust_stream_age_frac",
+      "block": "entity",
+      "single_feature_ap_train": 0.018875638188482584
+    },
+    {
+      "name": "cust_txn_per_active_day",
+      "block": "entity",
+      "single_feature_ap_train": 0.022794908735048768
+    },
+    {
+      "name": "te_location",
+      "block": "encoding",
+      "single_feature_ap_train": 0.029430557936171796
+    },
+    {
+      "name": "te_location_decay",
+      "block": "encoding",
+      "single_feature_ap_train": 0.030079332254002854
+    },
+    {
+      "name": "te_merchant_category",
+      "block": "encoding",
+      "single_feature_ap_train": 0.021910937769041697
+    },
+    {
+      "name": "te_merchant_category_decay",
+      "block": "encoding",
+      "single_feature_ap_train": 0.022638281757633806
+    },
+    {
+      "name": "te_device_type",
+      "block": "encoding",
+      "single_feature_ap_train": 0.023260150221626644
+    },
+    {
+      "name": "te_device_type_decay",
+      "block": "encoding",
+      "single_feature_ap_train": 0.023425912335675033
+    },
+    {
+      "name": "te_payment_method",
+      "block": "encoding",
+      "single_feature_ap_train": 0.019923336347037468
+    },
+    {
+      "name": "te_payment_method_decay",
+      "block": "encoding",
+      "single_feature_ap_train": 0.020021592634499652
+    },
+    {
+      "name": "te_transaction_type",
+      "block": "encoding",
+      "single_feature_ap_train": 0.02119570081828874
+    },
+    {
+      "name": "te_transaction_type_decay",
+      "block": "encoding",
+      "single_feature_ap_train": 0.021343030222065004
+    },
+    {
+      "name": "te_hour_bucket_X_device_type",
+      "block": "encoding",
+      "single_feature_ap_train": 0.09745382868401224
+    },
+    {
+      "name": "te_location_X_transaction_type",
+      "block": "encoding",
+      "single_feature_ap_train": 0.02934761167139592
+    },
+    {
+      "name": "te_merchant_id",
+      "block": "encoding",
+      "single_feature_ap_train": 0.09740799782937458
+    },
+    {
+      "name": "g_cust_degree_dev",
+      "block": "graph",
+      "single_feature_ap_train": 0.01874473817072322
+    },
+    {
+      "name": "g_dev_degree_cust",
+      "block": "graph",
+      "single_feature_ap_train": 0.046700678832909286
+    },
+    {
+      "name": "g_cust_degree_merch",
+      "block": "graph",
+      "single_feature_ap_train": 0.019284786210433745
+    },
+    {
+      "name": "g_comp_size",
+      "block": "graph",
+      "single_feature_ap_train": 0.018615797542354148
+    },
+    {
+      "name": "g_comp_n_cust",
+      "block": "graph",
+      "single_feature_ap_train": 0.018541823090916634
+    },
+    {
+      "name": "g_comp_n_dev",
+      "block": "graph",
+      "single_feature_ap_train": 0.018573675961519383
+    },
+    {
+      "name": "g_cust_2hop",
+      "block": "graph",
+      "single_feature_ap_train": 0.018901687417195112
+    },
+    {
+      "name": "g_dev_2hop",
+      "block": "graph",
+      "single_feature_ap_train": 0.02863432799669067
+    },
+    {
+      "name": "g_cd_cos",
+      "block": "graph",
+      "single_feature_ap_train": 0.04605746463844882
+    },
+    {
+      "name": "g_cm_cos",
+      "block": "graph",
+      "single_feature_ap_train": 0.02094605947267244
+    },
+    {
+      "name": "g_cust_emb_drift",
+      "block": "graph",
+      "single_feature_ap_train": 0.01813977085517232
+    },
+    {
+      "name": "g_cust_emb_norm",
+      "block": "graph",
+      "single_feature_ap_train": 0.018738486722717475
+    },
+    {
+      "name": "g_dev_emb_norm",
+      "block": "graph",
+      "single_feature_ap_train": 0.0496103958982614
+    },
+    {
+      "name": "g_same_component",
+      "block": "graph",
+      "single_feature_ap_train": 0.03258748288934649
+    },
+    {
+      "name": "days_since_graph_snapshot",
+      "block": "graph",
+      "single_feature_ap_train": 0.018911165334989738
+    },
+    {
+      "name": "gr_comp_size",
+      "block": "graph",
+      "single_feature_ap_train": 0.018446108200845943
+    },
+    {
+      "name": "gr_comp_n_cust",
+      "block": "graph",
+      "single_feature_ap_train": 0.0178302290818986
+    },
+    {
+      "name": "gr_comp_n_dev",
+      "block": "graph",
+      "single_feature_ap_train": 0.01838184031745555
+    },
+    {
+      "name": "gr_cust_degree_dev",
+      "block": "graph",
+      "single_feature_ap_train": 0.018420177719892177
+    },
+    {
+      "name": "gr_dev_degree_cust",
+      "block": "graph",
+      "single_feature_ap_train": 0.02600995021798063
+    },
+    {
+      "name": "gr_cust_2hop",
+      "block": "graph",
+      "single_feature_ap_train": 0.017847372792337092
+    },
+    {
+      "name": "gr_same_component",
+      "block": "graph",
+      "single_feature_ap_train": 0.02467438119095955
+    },
+    {
+      "name": "gr_dev_degree_ratio",
+      "block": "graph",
+      "single_feature_ap_train": 0.028246524327734824
+    },
+    {
+      "name": "gnn_cd_cos",
+      "block": "graph",
+      "single_feature_ap_train": 0.05345804304252267
+    },
+    {
+      "name": "gnn_cd_score",
+      "block": "graph",
+      "single_feature_ap_train": 0.051367741682185095
+    },
+    {
+      "name": "gnn_cust_emb_drift",
+      "block": "graph",
+      "single_feature_ap_train": 0.01784348105939143
+    },
+    {
+      "name": "gnn_cm_cos",
+      "block": "graph",
+      "single_feature_ap_train": 0.020071429010222845
+    },
+    {
+      "name": "g_comp_size_frac",
+      "block": "graph",
+      "single_feature_ap_train": 0.018615797542354148
+    },
+    {
+      "name": "g_dev_share_of_cust",
+      "block": "graph",
+      "single_feature_ap_train": 0.04793637400730157
+    }
+  ],
+  "boundary_review": [
+    "day_of_month",
+    "g_cust_emb_drift",
+    "merch_age_days",
+    "dev_age_days"
+  ]
+}
