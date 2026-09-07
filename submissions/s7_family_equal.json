@@ -1,0 +1,50 @@
+{
+  "name": "s7_family_equal",
+  "note": "Same six members as s6, weighted equally per family (1/2 CatBoost, 1/2 spread over the five LightGBM configs) instead of equally per member. Local tail_late +0.0007 [-0.0003, +0.0018], mean(late,far) +0.0007 -- below the floor, so this is spent to have a second scored candidate at equal expected score rather than to climb.",
+  "spec": "inline",
+  "weights": {
+    "lgb_base": 0.1,
+    "lgb_deep": 0.1,
+    "lgb_shallow": 0.1,
+    "lgb_reg": 0.1,
+    "lgb_extra": 0.1,
+    "cat_base": 0.5
+  },
+  "seeds": 3,
+  "postprocess": null,
+  "members": [
+    "cat_base_s0",
+    "cat_base_s1",
+    "cat_base_s2",
+    "lgb_base_s0",
+    "lgb_base_s1",
+    "lgb_base_s2",
+    "lgb_deep_s0",
+    "lgb_deep_s1",
+    "lgb_deep_s2",
+    "lgb_shallow_s0",
+    "lgb_shallow_s1",
+    "lgb_shallow_s2",
+    "lgb_reg_s0",
+    "lgb_reg_s1",
+    "lgb_reg_s2",
+    "lgb_extra_s0",
+    "lgb_extra_s1",
+    "lgb_extra_s2"
+  ],
+  "local": {},
+  "n_features": 244,
+  "te_feedback_delay_d": 7.0,
+  "use_signup_inconsistency": true,
+  "deterministic": true,
+  "rounds_book": "G:\\REACT_datathon\\data\\processed\\tune_rounds.s5_asbuilt.json",
+  "rounds": {
+    "lgb_base": 203,
+    "lgb_deep": 230,
+    "lgb_shallow": 494,
+    "lgb_reg": 404,
+    "lgb_extra": 482,
+    "cat_base": 855
+  },
+  "feature_source_hash": "a8b8548dca8f2a13"
+}

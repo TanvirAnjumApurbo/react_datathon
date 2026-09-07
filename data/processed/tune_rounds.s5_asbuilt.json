@@ -12,9 +12,7 @@
     },
     "halflife": null,
     "train_days": null,
-    "drop_blocks": [],
-    "seed_offset": 0,
-    "rounds": 244,
+    "rounds": 203,
     "n_train": 491877
   },
   "lgb_deep": {
@@ -30,7 +28,7 @@
     },
     "halflife": null,
     "train_days": null,
-    "rounds": 758,
+    "rounds": 230,
     "n_train": 491877
   },
   "lgb_shallow": {
@@ -46,7 +44,7 @@
     },
     "halflife": null,
     "train_days": null,
-    "rounds": 219,
+    "rounds": 494,
     "n_train": 491877
   },
   "lgb_reg": {
@@ -63,7 +61,7 @@
     },
     "halflife": null,
     "train_days": null,
-    "rounds": 398,
+    "rounds": 404,
     "n_train": 491877
   },
   "lgb_extra": {
@@ -80,7 +78,7 @@
     },
     "halflife": null,
     "train_days": null,
-    "rounds": 467,
+    "rounds": 482,
     "n_train": 491877
   },
   "hl_7d": {
@@ -96,9 +94,7 @@
     },
     "halflife": 7.0,
     "train_days": null,
-    "drop_blocks": [],
-    "seed_offset": 0,
-    "rounds": 179,
+    "rounds": 203,
     "n_train": 491877
   },
   "hl_14d": {
@@ -114,9 +110,7 @@
     },
     "halflife": 14.0,
     "train_days": null,
-    "drop_blocks": [],
-    "seed_offset": 0,
-    "rounds": 108,
+    "rounds": 113,
     "n_train": 491877
   },
   "hl_21d": {
@@ -132,9 +126,7 @@
     },
     "halflife": 21.0,
     "train_days": null,
-    "drop_blocks": [],
-    "seed_offset": 0,
-    "rounds": 115,
+    "rounds": 176,
     "n_train": 491877
   },
   "hl_45d": {
@@ -150,9 +142,7 @@
     },
     "halflife": 45.0,
     "train_days": null,
-    "drop_blocks": [],
-    "seed_offset": 0,
-    "rounds": 191,
+    "rounds": 112,
     "n_train": 491877
   },
   "hl_90d": {
@@ -168,9 +158,7 @@
     },
     "halflife": 90.0,
     "train_days": null,
-    "drop_blocks": [],
-    "seed_offset": 0,
-    "rounds": 193,
+    "rounds": 150,
     "n_train": 491877
   },
   "win_45d": {
@@ -186,9 +174,7 @@
     },
     "halflife": null,
     "train_days": 45,
-    "drop_blocks": [],
-    "seed_offset": 0,
-    "rounds": 106,
+    "rounds": 112,
     "n_train": 169230
   },
   "win_90d": {
@@ -204,9 +190,7 @@
     },
     "halflife": null,
     "train_days": 90,
-    "drop_blocks": [],
-    "seed_offset": 0,
-    "rounds": 150,
+    "rounds": 174,
     "n_train": 333403
   },
   "win_120d": {
@@ -222,9 +206,7 @@
     },
     "halflife": null,
     "train_days": 120,
-    "drop_blocks": [],
-    "seed_offset": 0,
-    "rounds": 207,
+    "rounds": 181,
     "n_train": 441565
   },
   "xgb_base": {
@@ -239,9 +221,7 @@
     },
     "halflife": null,
     "train_days": null,
-    "drop_blocks": [],
-    "seed_offset": 0,
-    "rounds": 191,
+    "rounds": 177,
     "n_train": 491877
   },
   "xgb_shallow": {
@@ -256,9 +236,7 @@
     },
     "halflife": null,
     "train_days": null,
-    "drop_blocks": [],
-    "seed_offset": 0,
-    "rounds": 1066,
+    "rounds": 1040,
     "n_train": 491877
   },
   "cat_base": {
@@ -270,114 +248,7 @@
     },
     "halflife": null,
     "train_days": null,
-    "drop_blocks": [],
-    "seed_offset": 0,
-    "rounds": 702,
-    "n_train": 491877
-  },
-  "lgb_durable": {
-    "kind": "lgb",
-    "params": {
-      "learning_rate": 0.05,
-      "num_leaves": 64,
-      "min_data_in_leaf": 100,
-      "feature_fraction": 0.7,
-      "bagging_fraction": 0.8,
-      "bagging_freq": 1,
-      "lambda_l2": 5.0
-    },
-    "halflife": null,
-    "train_days": null,
-    "drop_blocks": [
-      "amount"
-    ],
-    "seed_offset": 0,
-    "rounds": 246,
-    "n_train": 491877
-  },
-  "lgb_sub30": {
-    "kind": "lgb",
-    "params": {
-      "learning_rate": 0.05,
-      "num_leaves": 64,
-      "min_data_in_leaf": 100,
-      "feature_fraction": 0.3,
-      "bagging_fraction": 0.8,
-      "bagging_freq": 1,
-      "lambda_l2": 5.0
-    },
-    "halflife": null,
-    "train_days": null,
-    "drop_blocks": [],
-    "seed_offset": 7,
-    "rounds": 302,
-    "n_train": 491877
-  },
-  "lgb_linear": {
-    "kind": "lgb",
-    "params": {
-      "learning_rate": 0.05,
-      "num_leaves": 31,
-      "min_data_in_leaf": 200,
-      "feature_fraction": 0.7,
-      "bagging_fraction": 0.8,
-      "bagging_freq": 1,
-      "lambda_l2": 5.0,
-      "linear_tree": true,
-      "linear_lambda": 1.0
-    },
-    "halflife": null,
-    "train_days": null,
-    "drop_blocks": [],
-    "seed_offset": 0,
-    "rounds": 60,
-    "n_train": 491877
-  },
-  "cat_durable": {
-    "kind": "cat",
-    "params": {
-      "learning_rate": 0.05,
-      "depth": 8,
-      "l2_leaf_reg": 5.0
-    },
-    "halflife": null,
-    "train_days": null,
-    "drop_blocks": [
-      "amount"
-    ],
-    "seed_offset": 0,
-    "rounds": 875,
-    "n_train": 491877
-  },
-  "cat_deep": {
-    "kind": "cat",
-    "params": {
-      "learning_rate": 0.04,
-      "depth": 10,
-      "l2_leaf_reg": 10.0
-    },
-    "halflife": null,
-    "train_days": null,
-    "drop_blocks": [],
-    "seed_offset": 0,
-    "rounds": 574,
-    "n_train": 491877
-  },
-  "cat_rsm": {
-    "kind": "cat",
-    "params": {
-      "learning_rate": 0.05,
-      "depth": 8,
-      "l2_leaf_reg": 5.0,
-      "rsm": 0.6,
-      "bootstrap_type": "Bernoulli",
-      "subsample": 0.8
-    },
-    "halflife": null,
-    "train_days": null,
-    "drop_blocks": [],
-    "seed_offset": 0,
-    "rounds": 527,
+    "rounds": 855,
     "n_train": 491877
   }
 }

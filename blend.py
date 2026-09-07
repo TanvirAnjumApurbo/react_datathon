@@ -46,6 +46,7 @@ from src import config as C
 from src import evaluate as E
 from src import validation as V
 from src.io_utils import get_stream
+from tune import DIVERSE_CANDS, PARAM_CANDS
 
 TAIL_PREDS = C.PROCESSED / "tune_tail_preds.parquet"
 BLEND_SPEC = C.PROCESSED / "blend_spec_v2.json"
@@ -78,11 +79,30 @@ def as_ranks(members) -> dict[str, dict[str, np.ndarray]]:
     return {k: {t: rankdata(p) / n for t, p in v.items()} for k, v in members.items()}
 
 
+def horizons(ranks) -> tuple[str, ...]:
+    """The horizons *every* member has.
+
+    A blend can only be read where all of it exists. Averaging nine members at
+    one horizon and five at another makes them different models, and the point
+    of reading a blend at several distances is that it is the same model.
+    """
+    common = set.intersection(*(set(v) for v in ranks.values()))
+    return tuple(t for t in ("late", "recent", "far") if t in common)
+
+
 def objective_fn(y, which: str):
     if which == "late":
         return lambda c: V_ap(y, c["late"])
     if which == "recent":
         return lambda c: V_ap(y, c["recent"])
+    if which == "late_far":
+        # The horizon pair that brackets the real test window rather than
+        # sitting inside it. `tail_late` reads 46-62 days ahead and `tail_far`
+        # 75-91; the test set spans 1-62 days past its cutoff and then keeps
+        # drifting for another two months of calendar time, so its average
+        # exposure falls between them. `horizon_proxy.py` is what decides
+        # whether that geometric argument survives contact with the board.
+        return lambda c: 0.5 * (V_ap(y, c["late"]) + V_ap(y, c["far"]))
     return lambda c: 0.5 * (V_ap(y, c["late"]) + V_ap(y, c["recent"]))
 
 
@@ -92,7 +112,7 @@ def V_ap(y, p):
     return ap(y, p)
 
 
-def hill_climb(ranks, y, obj, n_iter: int = 30):
+def hill_climb(ranks, y, obj, tags, n_iter: int = 30):
     """Greedy selection with replacement, stopped at the peak.
 
     Members are added one at a time, repeats allowed so a strong model can
@@ -106,7 +126,7 @@ def hill_climb(ranks, y, obj, n_iter: int = 30):
         for n in names:
             k = len(chosen)
             cand = {t: (ranks[n][t] if cur is None else (cur[t] * k + ranks[n][t]) / (k + 1))
-                    for t in ("late", "recent")}
+                    for t in tags}
             a = obj(cand)
             if a > best[0]:
                 best = (a, n, cand)
@@ -116,9 +136,46 @@ def hill_climb(ranks, y, obj, n_iter: int = 30):
     k = int(np.argmax(hist)) + 1
     chosen = chosen[:k]
     weights = {n: chosen.count(n) / k for n in sorted(set(chosen))}
-    blended = {t: sum(w * ranks[n][t] for n, w in weights.items())
-               for t in ("late", "recent")}
+    blended = {t: sum(w * ranks[n][t] for n, w in weights.items()) for t in tags}
     return weights, hist[k - 1], blended
+
+
+def decorrelation(ranks, blended, y, tag: str = "late") -> pd.DataFrame:
+    """How differently does each member rank the window, versus the blend?
+
+    This is the diagnostic the ensemble ladder was missing, and the board paid
+    to teach it. Submissions 3 and 5 both added members to a blend, both had
+    local deltas far below the resolution limit, and they went opposite ways:
+    eight LightGBM recency/window variants cost 0.0025, one CatBoost gained
+    0.0014. What separated them was not the size of the local number but
+    whether the added members made *independent* errors.
+
+    Measured against the five-config LightGBM core on `tail_late`:
+
+        cat_base              rank rho 0.644   added in s5, +0.0014
+        hl_7d / hl_14d / ...  rank rho 0.736-0.826   added in s3, -0.0025
+        within-core members   rank rho 0.833-0.910   the clone floor
+        xgb_base              rank rho 0.827   a different library, inside the
+                                               clone band all the same
+
+    Note that **top-1% overlap does not separate the winner from the losers**
+    (cat_base 0.936 against hl_7d 0.931) while rank rho does, cleanly. Both are
+    printed, because the one that failed to discriminate is worth being able to
+    see fail rather than quietly dropping.
+    """
+    n = len(blended[tag])
+    k = max(int(0.01 * n), 1)
+    top_b = set(np.argsort(-blended[tag])[:k])
+    rows = []
+    for m, v in ranks.items():
+        r = v[tag]
+        rows.append({
+            "member": m,
+            "rho": float(np.corrcoef(r, blended[tag])[0, 1]),
+            "top1pct_overlap": len(set(np.argsort(-r)[:k]) & top_b) / k,
+            "ap": V_ap(y, r),
+        })
+    return pd.DataFrame(rows).sort_values("rho")
 
 
 # ---------------------------------------------------------------------------
@@ -185,15 +242,21 @@ def test_postprocessing(blended, y, df, tail_mask, obj) -> pd.DataFrame:
 
 def main() -> None:
     ap_ = argparse.ArgumentParser()
-    ap_.add_argument("--objective", default="mean", choices=["mean", "late", "recent"])
+    ap_.add_argument("--objective", default="mean",
+                     choices=["mean", "late", "recent", "late_far"])
     ap_.add_argument("--boot", type=int, default=400)
     args = ap_.parse_args()
 
     members, y = load_preds()
     ranks = as_ranks(members)
+    tags = horizons(ranks)
+    if args.objective == "late_far" and "far" not in tags:
+        raise SystemExit("objective late_far needs a far read on every member; "
+                         "run tune.py --far for the sets that are missing it")
     obj = objective_fn(y, args.objective)
     br = float(y.mean())
     print(f"\n{len(members)} members, {len(y):,} tail rows, base rate {br:.4f}")
+    print(f"horizons common to every member: {tags}")
 
     print("\n=== SINGLES ===")
     singles = []
@@ -208,8 +271,7 @@ def main() -> None:
 
     def equal(names):
         w = {n: 1 / len(names) for n in names}
-        return w, {t: np.mean([ranks[n][t] for n in names], axis=0)
-                   for t in ("late", "recent")}
+        return w, {t: np.mean([ranks[n][t] for n in names], axis=0) for t in tags}
 
     # Three a-priori groupings, none of which learns a weight from the tail:
     #   core     the five hyperparameter configs -- what submission 2 shipped
@@ -221,17 +283,35 @@ def main() -> None:
     if ROUND_BOOK.exists():
         kinds = {k: v.get("kind", "lgb") for k, v in
                  json.loads(ROUND_BOOK.read_text()).items()}
-    core = [n for n in ranks if n.startswith("lgb")]
+    # `core` is submission 2's five hyperparameter configs, taken from the
+    # candidate list rather than matched on an `lgb` prefix -- the members added
+    # for decorrelation are LightGBM too, and a prefix would silently redefine
+    # the one grouping that has a leaderboard score attached to it.
+    core = [n for n in (c.name for c in PARAM_CANDS) if n in ranks]
     lgb_all = [n for n in ranks if kinds.get(n, "lgb") == "lgb"]
-    weights, hc_obj, hc_blend = hill_climb(ranks, y, obj)
+    diverse = [n for n in (c.name for c in DIVERSE_CANDS) if n in ranks]
+    weights, hc_obj, hc_blend = hill_climb(ranks, y, obj, tags)
 
     options = {f"best_single ({best_single})": ({best_single: 1.0}, ranks[best_single])}
-    for label, names in (("equal_core", core), ("equal_lgb_all", lgb_all),
-                         ("equal_all", list(ranks))):
+    groups = [("equal_core", core), ("equal_lgb_all", lgb_all),
+              ("equal_all", list(ranks))]
+    # Submission 5's shape, and the same thing widened by every member proposed
+    # for decorrelation. Both are a-priori: membership is decided by what a
+    # member is, not by what it scored on the window doing the judging.
+    if "cat_base" in ranks:
+        groups.insert(1, ("equal_core_cat", core + ["cat_base"]))
+        if len(diverse) > 1:
+            groups.insert(2, ("equal_core_cat_diverse",
+                              sorted(set(core + ["cat_base"] + diverse))))
+    for label, names in groups:
         if names and label not in options:
             options[label] = equal(names)
     options["hill_climb"] = (weights, hc_blend)
-    has_far = "far" in next(iter(ranks.values()))
+    # Every member, not an arbitrary one. The old form read whichever member
+    # `dict` happened to yield first: with partial coverage that silently
+    # dropped the far column when the first member lacked it, and would have
+    # raised KeyError under a different insertion order.
+    has_far = "far" in tags
     for label, (ww_, b) in options.items():
         far = ""
         if has_far:
@@ -295,6 +375,15 @@ def main() -> None:
     print(f"\n  chosen: {pick}")
     for n, ww in sorted(w.items(), key=lambda kv: -kv[1]):
         print(f"    {n:<16s} {ww:.3f}")
+
+    print("\n=== DECORRELATION vs the chosen blend (tail_late) ===")
+    dec = decorrelation(ranks, blended, y)
+    print(dec.to_string(index=False, float_format=lambda x: f"{x:.4f}"))
+    print("\n  Board calibration: cat_base entered at rho 0.644 and gained +0.0014;\n"
+          "  eight LightGBM recency/window variants entered at rho 0.736-0.826 and\n"
+          "  cost 0.0025. Core members sit at 0.833-0.910 among themselves. Treat\n"
+          "  rho <= 0.70 as the bar a new member has to clear, and note that\n"
+          "  top-1% overlap does not separate the two cases at all.")
 
     print("\n=== ENTITY POST-PROCESSING ===")
     df = get_stream()

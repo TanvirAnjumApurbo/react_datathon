@@ -32,6 +32,11 @@ data/processed/*
 !data/processed/fold_results.csv
 !data/processed/tune_results.csv
 !data/processed/tune_rounds.json
+# The pinned round counts behind submissions 4-10. Early stopping is not stable
+# across feature rebuilds (lgb_deep: 230 rounds one day, 758 the next), so this
+# file is part of what identifies those models -- naming the members is not
+# enough to reproduce them.
+!data/processed/tune_rounds.s5_asbuilt.json
 !data/processed/postprocess_results.csv
 !data/processed/blend_spec_v2.json
 !data/processed/blend_spec_equal_all.json

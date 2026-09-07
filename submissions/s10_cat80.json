@@ -1,0 +1,50 @@
+{
+  "name": "s10_cat80",
+  "note": "s7's members and pinned rounds, CatBoost weight moved from 0.50 to 0.80. Local mean(late,far) is flat from 0.40 to 0.75 so local cannot locate the optimum; the board resolved the 1/6 -> 1/2 move at +0.00155 against a measured same-composition floor of 0.00019, and overshot local's +0.0007 prediction by ~2x. These two points bracket where the board's optimum actually sits.",
+  "spec": "inline",
+  "weights": {
+    "lgb_base": 0.04,
+    "lgb_deep": 0.04,
+    "lgb_shallow": 0.04,
+    "lgb_reg": 0.04,
+    "lgb_extra": 0.04,
+    "cat_base": 0.8
+  },
+  "seeds": 3,
+  "postprocess": null,
+  "members": [
+    "cat_base_s0",
+    "cat_base_s1",
+    "cat_base_s2",
+    "lgb_base_s0",
+    "lgb_base_s1",
+    "lgb_base_s2",
+    "lgb_deep_s0",
+    "lgb_deep_s1",
+    "lgb_deep_s2",
+    "lgb_shallow_s0",
+    "lgb_shallow_s1",
+    "lgb_shallow_s2",
+    "lgb_reg_s0",
+    "lgb_reg_s1",
+    "lgb_reg_s2",
+    "lgb_extra_s0",
+    "lgb_extra_s1",
+    "lgb_extra_s2"
+  ],
+  "local": {},
+  "n_features": 244,
+  "te_feedback_delay_d": 7.0,
+  "use_signup_inconsistency": true,
+  "deterministic": true,
+  "rounds_book": "G:\\REACT_datathon\\data\\processed\\tune_rounds.s5_asbuilt.json",
+  "rounds": {
+    "lgb_base": 203,
+    "lgb_deep": 230,
+    "lgb_shallow": 494,
+    "lgb_reg": 404,
+    "lgb_extra": 482,
+    "cat_base": 855
+  },
+  "feature_source_hash": "a8b8548dca8f2a13"
+}

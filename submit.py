@@ -51,7 +51,7 @@ from src import harness as H
 from src import validation as V
 from src.io_utils import get_stream
 from src.features import encoding
-from tune import FITTERS, recency_weights, train_mask
+from tune import FITTERS, keep_columns, recency_weights, train_mask
 
 ROUND_BOOK = C.PROCESSED / "tune_rounds.json"
 BLEND_SPEC = C.PROCESSED / "blend_spec_v2.json"
@@ -77,7 +77,12 @@ def main() -> None:
     ap_.add_argument("--name", required=True, help="submission name (no extension)")
     ap_.add_argument("--spec", default=None, help="blend spec json (default: blend_spec_v2)")
     ap_.add_argument("--weights", default=None, help='inline JSON, e.g. \'{"lgb_base": 1.0}\'')
-    ap_.add_argument("--seeds", type=int, default=3)
+    ap_.add_argument("--seeds", type=int, default=3,
+                     help="seeds averaged per member. With --deterministic the "
+                          "run-to-run float churn is gone, so these average over "
+                          "genuine bagging/feature-sampling variance only; past 3 "
+                          "the member-level noise in a multi-member blend is "
+                          "already ~0.001 and more seeds buy very little.")
     ap_.add_argument("--no-post", action="store_true", help="ignore any post-processing in the spec")
     ap_.add_argument("--no-gnn", action="store_true")
     ap_.add_argument("--deterministic", action="store_true",
@@ -85,10 +90,26 @@ def main() -> None:
                           "8.2 forfeits a position that cannot be reproduced from "
                           "the submitted notebook, so use this for anything that "
                           "might be selected for private scoring.")
+    ap_.add_argument("--rounds-book", default=None,
+                     help="round book to refit from (default: tune_rounds.json). "
+                          "Round counts are not stable between runs of tune.py -- "
+                          "`lgb_deep` early-stopped at 230 rounds one day and 758 "
+                          "the next, for a tail_late move of 0.0011 -- so "
+                          "reproducing a previous submission means pinning the book "
+                          "it was built from, not just its member list.")
     ap_.add_argument("--note", default="", help="what this submission is spent to learn")
     args = ap_.parse_args()
 
-    book = json.loads(ROUND_BOOK.read_text())
+    book_path = ROUND_BOOK
+    if args.rounds_book:
+        # Accept a full path or a bare filename inside data/processed, the same
+        # way `--spec` does.
+        book_path = pathlib.Path(args.rounds_book)
+        if not book_path.exists():
+            book_path = C.PROCESSED / args.rounds_book
+    if not book_path.exists():
+        raise SystemExit(f"no round book at {book_path}; run tune.py first")
+    book = json.loads(book_path.read_text())
     if args.weights:
         weights, post, spec_src, local = json.loads(args.weights), None, "inline", {}
     else:
@@ -109,7 +130,7 @@ def main() -> None:
 
     missing = [m for m in weights if m not in book]
     if missing:
-        raise SystemExit(f"members not in {ROUND_BOOK}: {missing}")
+        raise SystemExit(f"members not in {book_path}: {missing}")
 
     df = get_stream()
     ts, is_test = df[C.TIME_COL], df["is_test"].to_numpy()
@@ -121,20 +142,43 @@ def main() -> None:
     X = pd.concat([base, te], axis=1)
     print(f"  matrix {X.shape[1]} cols")
 
-    Xs = X[is_test]
+    prov = dict(H.base_provenance())
     n_test = int(is_test.sum())
     acc, total_w, members = np.zeros(n_test), 0.0, []
 
+    # A member that is denied a feature block needs its own view of the test
+    # matrix. Cached by keep-list so the common case -- every member seeing
+    # everything -- still slices the 262k x 243 test block exactly once.
+    test_views: dict[tuple, pd.DataFrame] = {}
+
+    def test_X(keep):
+        k = tuple(keep)
+        if k not in test_views:
+            test_views[k] = X.loc[is_test, keep]
+        return test_views[k]
+
     for name, w_cfg in sorted(weights.items(), key=lambda kv: -kv[1]):
         cfg = book[name]
-        # A member's seed-averaged test ranking depends on the member, the seed
-        # count, the determinism switch and the feature matrix -- not on which
-        # blend is asking for it. Caching on exactly those means the second,
-        # third and fourth submission variants cost seconds instead of a refit
-        # each, which is the difference between exploring four ideas today and
-        # exploring one.
+        drop_blocks = set(cfg.get("drop_blocks") or [])
+        seed_offset = int(cfg.get("seed_offset", 0) or 0)
+        keep = keep_columns(X.columns, prov, drop_blocks)
+        if drop_blocks and len(keep) == len(X.columns):
+            raise SystemExit(
+                f"{name} declares drop_blocks={sorted(drop_blocks)} but no column "
+                "matched -- the provenance stamp is missing or stale. Refusing to "
+                "refit it as a full-feature model under its own name.")
+        # A member's seed-averaged test ranking depends on what the member *is*
+        # -- its feature view, its seed schedule, the seed count, the determinism
+        # switch and the feature matrix -- and not on which blend is asking for
+        # it. Caching on exactly those means the second, third and fourth
+        # submission variants cost seconds instead of a refit each, which is the
+        # difference between exploring four ideas today and exploring one. Leave
+        # the view or the offset out and a member whose definition changed would
+        # silently serve the previous fit under the same name.
+        view = f"__d{'-'.join(sorted(drop_blocks))}" if drop_blocks else ""
+        view += f"__o{seed_offset}" if seed_offset else ""
         key = f"{name}__s{args.seeds}{'__det' if args.deterministic else ''}" \
-              f"__{H.feature_source_hash()}"
+              f"{view}__{H.feature_source_hash()}"
         cache = CACHE_DIR / f"{key}.npy"
         if cache.exists():
             member_rank = np.load(cache)
@@ -145,21 +189,35 @@ def main() -> None:
             n_final = int(tm.sum())
             rounds = max(int(cfg["rounds"] * (n_final / max(cfg["n_train"], 1)) ** 0.5), 50)
             w_row = recency_weights(ts, tm, C.TRAIN_END, cfg["halflife"])
-            Xt, yt = X[tm], y[tm]
+            Xt, yt = X.loc[tm, keep], y[tm]
+            Xs = test_X(keep)
 
             seed_ranks = []
             for s in range(args.seeds):
                 t = time.time()
                 params = dict(cfg["params"])
-                if args.deterministic and cfg["kind"] == "lgb":
-                    params.update(deterministic=True, force_row_wise=True, num_threads=8)
+                if args.deterministic:
+                    # Rulebook 8.2 forfeits a position that cannot be reproduced
+                    # from the submitted notebook, so every family in the blend
+                    # has to be pinned -- not just LightGBM. All three are
+                    # order-sensitive in their histogram accumulation, and all
+                    # three become repeatable once the thread count is fixed
+                    # alongside the seed.
+                    params.update({
+                        "lgb": dict(deterministic=True, force_row_wise=True,
+                                    num_threads=8),
+                        "xgb": dict(nthread=8),
+                        "cat": dict(thread_count=8),
+                    }[cfg["kind"]])
                 _, _, pred_fn = FITTERS[cfg["kind"]](
-                    Xt, yt, w_row, None, None, params, rounds, C.SEED + 100 * s)
+                    Xt, yt, w_row, None, None, params, rounds,
+                    C.SEED + seed_offset + 100 * s)
                 p = pred_fn(Xs)
                 seed_ranks.append(rankdata(p) / n_test)
                 members.append(f"{name}_s{s}")
                 print(f"  {name}_s{s:<2d} w={w_cfg:.3f} rounds={rounds:5d} "
-                      f"train={n_final:,} {time.time() - t:5.0f}s", flush=True)
+                      f"train={n_final:,} feat={len(keep)} "
+                      f"{time.time() - t:5.0f}s", flush=True)
             # Average seeds first, then apply the member's blend weight: the
             # seeds are the same model, the members are not.
             member_rank = np.mean(seed_ranks, axis=0)
@@ -196,6 +254,14 @@ def main() -> None:
         "n_features": int(X.shape[1]),
         "te_feedback_delay_d": C.TE_FEEDBACK_DELAY_D,
         "use_signup_inconsistency": C.USE_SIGNUP_INCONSISTENCY,
+        # Everything a rerun needs that is not the member list. The round book
+        # is not stable across runs of tune.py and the feature hash is not
+        # stable across a config flip, so a JSON that names only the members
+        # does not identify the model that produced the CSV.
+        "deterministic": bool(args.deterministic),
+        "rounds_book": str(book_path),
+        "rounds": {m: book[m]["rounds"] for m in weights},
+        "feature_source_hash": H.feature_source_hash(),
     }, indent=2, default=str))
 
     print(f"\nwrote {out}  ({len(sub):,} rows, {len(members)} models)")

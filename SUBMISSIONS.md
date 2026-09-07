@@ -17,11 +17,11 @@ even if it scores well.
 | 3 | 2026-09-07 | `s3_equal_lgb_all` | 0.5530 | **0.53901** | −0.014 | Does averaging 13 differently-memoried models help? **No — it cost 0.0025, while local said +0.0023.** |
 | 4 | 2026-09-07 | `s4_signup_integrity` | ~+0.025 est | **0.54874** | — | What is `signup_inconsistency_d` worth? **+0.0072. Real, priced, and still not adopted.** |
 | 5 | 2026-09-07 | `s5_signup_plus_cat` | — | **0.55014** | — | Submission 4 + `cat_base`: does one decorrelated member beat eight clones? **Yes, +0.0014 — and local called this one correctly.** |
-| 6 | — | — | — | — | — | — |
-| 7 | — | — | — | — | — | — |
-| 8 | — | — | — | — | — | — |
-| 9 | — | — | — | — | — | — |
-| 10 | — | — | — | — | — | — |
+| 6 | 2026-09-07 | `s6_det_s5comp` | 0.5519 | **0.54995** | −0.002 | Is the leading submission reproducible, and what does a same-composition rebuild cost? **0.00019** — the board's floor is 10x tighter than assumed. |
+| 7 | 2026-09-07 | `s7_family_equal` | 0.5526 | **0.55150** | −0.001 | Weight per *family*, not per member. **+0.00155 over s6 from the weight vector alone — the best score in the project.** |
+| 8 | 2026-09-07 | `s8_clean_line` | 0.5511 | **0.54548** | — | What is `signup_inconsistency_d` worth at the **final** composition? **+0.00602**, against +0.0072 on the older blend. |
+| 9 | 2026-09-07 | `s9_cat65` | 0.5448 | **0.55187** | — | Is the board's blend-weight optimum right of local's? **Yes: w_cat 0.50 → 0.65 gained +0.00037.** |
+| 10 | 2026-09-07 | `s10_cat80` | 0.5445 | **0.55203** | +0.008 | Where does the weight curve turn? **It does not, by w=0.80 — best score of the competition.** |
 
 ---
 
@@ -451,6 +451,308 @@ diagnostic than either number alone.
 
 Hold the +0.0014 loosely: it is a public-60% figure on two files sharing 98.9%
 of their top 1%, and it does not guarantee the private 40% agrees.
+
+---
+
+## Day 2 — the search closes, and the reproducibility hole opens
+
+Day 2 opened at 0.55014 and rank 14 of a leaderboard led by 0.57. Five
+submissions left, two private slots, and the round closing the same night. The
+day was planned around three questions: is there a local statistic that resolves
+below 0.008, is there an ensemble member worth adding, and is the leading
+submission actually reproducible. The answers are no, no, and no — and the third
+one turned out to be the only one that mattered.
+
+### The far horizon is now filled in, and it earns its keep
+
+`tune.py --far` was run over every candidate so all 20 members carry
+`tail_recent` (1–17 d), `tail_late` (46–62 d) and `tail_far` (75–91 d) on one
+matrix. Two things follow immediately.
+
+**The ordering genuinely changes with horizon.** `lgb_extra` is 7th of 8 at
+`tail_late` and **1st at `tail_far`**; `lgb_deep` is 2nd at `tail_recent` and
+last at `tail_far`. A single-horizon read is not just noisy, it is answering a
+different question than the private half of the test set asks.
+
+**Blend decay rises monotonically with member count**, which finally gives
+submission 3's board loss a mechanism rather than a story:
+
+| composition | members | tail_late | tail_far | decay |
+|---|---|---|---|---|
+| `equal_core` (= s2) | 5 | 0.5511 | 0.5342 | **0.0169** |
+| `equal_lgb_all` (= s3) | 13 | 0.5532 | 0.5335 | **0.0197** |
+| `equal_all` | 20 | 0.5517 | 0.5328 | 0.0190 |
+
+The thirteen-member blend is *better* near and *worse* far. It bought
+near-horizon AP and paid for it in the regime the private 40% sits in, which is
+exactly the trade the board charged 0.0025 for.
+
+### `mean(tail_late, tail_far)` is a better estimator and still not a discriminator
+
+The hypothesis was that the board lands between the two horizons, so their mean
+should predict it. As a **level** estimator that is clearly right:
+
+| composition | tail_late | mean(late,far) | board | err(late) | err(mean) |
+|---|---|---|---|---|---|
+| `equal_core` | 0.5511 | 0.5427 | 0.5415 | +0.0096 | **+0.0012** |
+| `equal_lgb_all` | 0.5532 | 0.5433 | 0.5390 | +0.0141 | **+0.0043** |
+
+As a **discriminator** it fails the same way `tail_late` does: the board puts s2
+above s3 by 0.0025, and `mean(late,far)` puts s3 above s2 by 0.0007. So the
+0.008 resolution limit is not an artefact of a badly-centred statistic — 1,068
+positives cannot resolve 0.0025 no matter what functional is computed from them.
+That is a stronger and more useful version of the standing rule.
+
+(`tail_far` *alone* happens to get the sign right. With three candidate
+statistics and one comparison, one agreeing by chance is the expected outcome,
+and it is recorded here specifically so it does not get promoted to a rule.)
+
+### Four members proposed with mechanisms; three refuted, one a clone
+
+Each was specified in advance with a reason it should make *different* errors,
+then judged on a four-part gate — mechanism, decorrelation (rank ρ ≤ 0.70
+against the blend), competence (within 0.010 of the core at `tail_late`), and
+horizon (decay no worse than the core's).
+
+| member | mechanism | ρ | tail_late | tail_far | verdict |
+|---|---|---|---|---|---|
+| `lgb_durable` | no `amount` block; that family retains only 0.61–0.64 of its power late | 0.777 | 0.5397 | 0.5197 | **refuted** — decay 0.0200, *worse* |
+| `cat_durable` | same view, decorrelating family | 0.632 | 0.5385 | 0.5143 | **refuted** — decay 0.0242 |
+| `lgb_linear` | linear leaves extrapolate past split points | 0.572 | 0.5484 | **0.5016** | **refuted** — decay 0.0468 |
+| `lgb_sub30` | feature bagging over a redundant space | 0.829 | 0.5483 | 0.5331 | competent, **is a clone** |
+
+**`lgb_durable` is the instructive failure.** Per-feature retention says the
+amount family loses 36–39% of its standalone power across the regime split while
+velocity and graph lose 1–11%, so a model denied `amount` should decay more
+slowly. It decays *faster* (0.0200 vs 0.0169) and is 0.0094 worse at `late`.
+Standalone feature retention does not predict how a model built on those
+features behaves — the same gap between gain share and marginal value the repo
+already documents for `encoding` vs `behaviour`, in a new place.
+
+**`lgb_linear` is why the far read exists.** It ties the core on the selection
+target (0.5484 vs 0.5491), passes the decorrelation gate comfortably at ρ 0.572,
+and has a documented mechanism. It would have passed every check this project
+had before today. At 75–91 days it collapses to 0.5016 — a decay of 0.0468,
+nearly 3× anything else measured. The literature's caveat fits better than the
+hypothesis did: linear leaves extrapolate as linear functions and *diverge*, and
+the unbounded counters are far outside their training range by then. (It also
+early-stopped at 60 rounds, so under-training is a competing explanation; it
+fails either way.)
+
+**Decorrelation and competence trade off against each other here.** The two most
+independent members in the project (`lgb_linear` 0.572, `cat_durable` 0.632) are
+precisely the two that fall apart at the far horizon; the one that matches the
+core everywhere is a clone at 0.829. `cat_base` — ρ 0.624 *and* competitive at
+all three horizons — is the sole exception, which is why it was the member that
+paid, and it now looks like a rare object rather than one draw from a family of
+possible additions. Note also that `xgb_base` sits at ρ 0.824, inside the
+LightGBM clone band: **a different library is not automatically a different
+model.**
+
+### Nothing improves the blend, including the weights
+
+Equal weight per *family* rather than per member (CatBoost at ½ instead of ⅙)
+measures +0.0007 on `tail_late` with a paired interval of [−0.0003, +0.0018] —
+inside the floor, interval spanning zero. Adding `xgb_base` moves it −0.0001.
+The s5 composition is not improvable with the members that exist.
+
+### The second private slot is worth ~0.00006
+
+Measured on the actual submission CSVs, every candidate pair shares **93.6–99.0%
+of its top 1%**, and average precision reads the head of the ranking. Dropping
+all the way to a single model (`cat_base` alone) only gets head overlap down to
+94.2% against the blend, at a cost of 0.0012 on `mean(late,far)`.
+
+Working the max-of-two arithmetic: the paired interval between those two gives
+σ ≈ 0.0013 on the tail, ≈0.0010 scaled to the private draw's ~1,786 positives,
+against a 0.0012 expected deficit. `E[max] − E[best]` ≈ **+0.00006 AP**. The
+second slot cannot be made to do useful work, and manufacturing a "hedge" would
+only cost expected score. Select the two highest expected scores and say so.
+
+### The finding that changed the day: the pipeline is not reproducible
+
+`lgb_deep` early-stopped at **230 rounds** on day 1 and **758** on day 2 — same
+code, same data, same params, same disjoint stopping window — for a `tail_late`
+change of 0.0011. The cause is not LightGBM: `lgb_base` reproduced to four
+decimals across three separate processes today. It is the feature matrix.
+
+| gnn column | bit-identical across builds | max abs diff | correlation |
+|---|---|---|---|
+| `gnn_cd_score` | no | 3.2e-04 | 1.000000 |
+| `gnn_cd_cos` | no | 1.5e-05 | 1.000000 |
+| `gnn_cm_cos` | no | 1.0e-05 | 1.000000 |
+| `gnn_cust_emb_drift` | no | 3.0e-06 | 1.000000 |
+
+`gnn.py` **is** seeded — `torch.manual_seed`, seeded generators, a seeded state
+initialiser. This is float non-determinism in multi-threaded CPU reductions. A
+3e-4 perturbation of four columns out of 244 is enough to move an early stop by
+3×, which says the AP stopping curve is a plateau, not a peak.
+
+Three consequences, and the first two are now enforced in code:
+
+1. **Round counts must be pinned, not re-derived.** `submit.py --rounds-book`
+   takes the book a submission was built from;
+   `tune_rounds.s5_asbuilt.json` preserves the counts that produced 0.55014.
+   Naming the same members is *not* enough to identify the same model.
+2. **The matrix must be shipped, not just the code.** The 244-column build that
+   produced submissions 6 and 7 is preserved at
+   `data/processed/base_features.signup.parquet`.
+3. **A paired-bootstrap verdict is not stable across a rebuild.**
+   `lgb_shallow` measured −0.0007 against `lgb_base` on day 1 and **+0.0032,
+   verdict `BETTER`, interval excluding zero** on day 2. The verdict machinery
+   promoted a candidate on nothing but early-stopping churn. This is the
+   sharpest evidence yet for the repo's own rule that sub-0.008 deltas are not
+   results — the round book is a *larger* run-to-run variance source than the
+   0.003 seed noise that was documented.
+
+This mattered because **s5 could not be reproduced.** It was fitted with
+`deterministic=False` at 2 seeds, and its feature matrix was overwritten. At
+rank 14 — on the top-15 boundary, where rulebook 8.2 forfeits a position that
+cannot be reproduced from the submitted notebook — that is the largest
+uninsured risk on the board, and it is not a modelling problem.
+
+### 6 — `s6_det_s5comp`: the reproducible finalist
+
+Submission 5's composition exactly (five LightGBM configs + `cat_base`, 244
+columns), refit with `--deterministic` across all three families at 3 seeds,
+round counts pinned to the as-built book. Head overlap with s5 is **99.0%**, so
+the expected board delta is ~0.
+
+That is the point. It is spent on reproducibility, not score. A *large* move
+here would itself be a finding — it would mean the run-to-run floor is wider
+than the documented 0.003.
+
+### 7 — `s7_family_equal`: the only remaining structural choice
+
+The same six members weighted equally per family rather than per member. Local
++0.0007, below the floor; taken because an unspent upload is worth nothing and
+this is the highest-expected-score candidate left, **not** because it hedges —
+its head overlap with s6 is 97.9%.
+
+### What 6 and 7 returned, and why the pair is worth more than either score
+
+| | composition | seeds / det | public LB |
+|---|---|---|---|
+| s5 | member-equal, 6 members | 2, non-det | 0.55014 |
+| s6 | **identical composition**, pinned rounds | 3, det | **0.54995** |
+| s7 | same members, family-equal weights | 3, det | **0.55150** |
+
+**s5 → s6 is the cleanest measurement this project has made.** Same members,
+same pinned round counts, same feature matrix; only the seed count and
+determinism changed. The board moved **0.00019**. Every "noise floor" figure in
+this repo — 0.003, inherited from a comparison that also rebuilt the features —
+is an order of magnitude too conservative *for a same-composition rebuild*. The
+board can resolve differences this repo has been treating as unresolvable.
+
+**That makes s6 → s7 readable.** The two differ in nothing but the weight
+vector, and the board moved **+0.00155** — about 8× the floor just measured, in
+the direction local predicted (+0.0007 on `tail_late`, interval
+[−0.0003, +0.0018]). Local and board agreed in sign and roughly in size, which
+they have not done for a change this small before.
+
+Two corrections to standing beliefs follow. The **noise floor is not one
+number** — it depends on what varied. Rebuilding the features moves a round
+count 3× and the score by ~0.002; holding the matrix fixed and changing seeds
+moves it by 0.0002. And **weighting is not "post-processing that does not
+matter"**: shifting half the blend's mass onto the one decorrelated member is
+the second-largest per-submission gain of the whole competition after the
+feature rebuild and the integrity feature.
+
+### Where that leaves the last three submissions
+
+The local CatBoost-weight curve is flat where it matters:
+
+| w_cat | 0.167 (s6) | 0.400 | **0.500 (s7)** | 0.600 | 0.750 | 1.000 |
+|---|---|---|---|---|---|---|
+| `tail_late` | 0.5519 | 0.5524 | **0.5526** | 0.5526 | 0.5526 | 0.5516 |
+| mean(late,far) | 0.5434 | 0.5440 | **0.5441** | 0.5441 | 0.5439 | 0.5422 |
+
+s7 sits on the peak, and six a-priori variants of the *core* side — dropping the
+most redundant member (ρ 0.915), dropping the steepest-decay member, adding
+XGBoost at 0.1 — all land within 0.0002 of it. **There is no local signal left
+to follow**, and following the board alone at this scale is the public-LB
+chasing the rules explicitly warn against.
+
+One mechanism remains that the weight curve structurally cannot test. All of the
+decorrelated half currently rides on a *single* model (seed-averaged, but one
+configuration). Splitting that half across genuinely different CatBoost
+configurations — `cat_deep` (depth 10) and `cat_rsm` (random subspace, Bernoulli
+bootstrap) — reduces the decorrelated half's own variance without shrinking its
+weight. That is the last question worth a submission.
+
+### 8 — `s8_clean_line`: pricing the integrity feature on the model actually shipped
+
+s7's exact composition, weights and round book on the 243-column clean matrix;
+the single variable is `signup_inconsistency_d`. **0.54548, so the feature is
+worth +0.00602 here** — against the +0.0072 measured by submissions 4 vs 2 on
+the older member-equal blend. Consistent, and now priced on the model being
+submitted rather than inherited from a different one.
+
+It is also the most decorrelated file in the set (top-1% overlap 0.970 with s7,
+against 0.98–0.99 for every other pair), because removing a feature changes the
+model in a way reweighting one cannot. Not a contender at 0.006 behind, but a
+documented fallback if the feature is ever questioned.
+
+### 9 and 10 — the weight curve has no interior maximum
+
+Local's curve is flat from w_cat 0.4 to 0.75 and turns down after; with the
+refreshed CatBoost predictions it peaks at 0.65 and puts 0.80 *below* 0.50. The
+board disagrees:
+
+| w_cat | 0.167 | 0.500 | 0.650 | 0.800 |
+|---|---|---|---|---|
+| **public LB** | 0.54995 | 0.55150 | 0.55187 | **0.55203** |
+| step | — | +0.00155 | +0.00037 | +0.00016 |
+| local mean(late,far) | 0.5434 | 0.5447 | **0.5448** | 0.5445 |
+
+Monotone increasing and sharply decelerating — **+0.00208 in total from moving
+weight onto the one decorrelated member.** After the feature rebuild (+0.0144)
+and the integrity feature (+0.0060), this is the third-largest effect of the
+competition, and it came from a parameter that costs nothing to change.
+
+Three things worth keeping, and one admission.
+
+**The prediction was wrong.** s10 was uploaded expecting a *decline*, to
+demonstrate an interior optimum for the write-up. There isn't one inside the
+tested range. Recorded because a plan that survives its own test teaches less
+than one that does not.
+
+**The last step is below the floor.** +0.00016 at w = 0.65 → 0.80 sits under the
+0.00019 same-composition floor measured at s5 → s6, so that increment alone is
+not distinguishable from noise. Four monotone points are evidence; the fourth
+step on its own is not.
+
+**Local and the board disagree about *where* the optimum is, exactly as the
+resolution limit predicts.** Local says 0.65, the board says ≥0.80, and the gap
+between them (0.0003) is far under the ~0.008 the tail window can resolve.
+Neither is "wrong" — the question is finer than the local instrument.
+
+**What was ruled out, with reasons, before settling on the weight probes:**
+
+| candidate | why not |
+|---|---|
+| splitting the CatBoost half across `cat_base` + `cat_rsm` (+ `cat_deep`) | exact tie at w = 0.50, 0.65 **and** 0.80 — the "more weight makes variance matter more" argument is wrong |
+| CatBoost `boosting_type="Ordered"` | its benefit is avoiding leakage in *categorical* target statistics, and this matrix is entirely numeric. Timed anyway: **12–13× slower** than Plain, ≈2 h for one fit at 492k rows — infeasible, and for an inactive mechanism |
+| mixing in the clean line (s8) | 0.006 behind at 97% head overlap; cannot pay for itself |
+| more seeds | s5 → s6 measured this at −0.00019 |
+
+### The private pair
+
+**`s10_cat80` (0.55203) + `s9_cat65` (0.55187).** They are simultaneously the two
+highest public scores *and* the two candidates that bracket the local-vs-board
+disagreement about where the weight optimum sits — local's peak is s9's 0.65,
+the board's is s10's 0.80. Both are deterministic, pinned to
+`tune_rounds.s5_asbuilt.json`, built on the preserved 244-column matrix, and
+therefore reproducible from the notebook.
+
+`s5_signup_plus_cat` (0.55014) is deliberately **not** selected despite beating
+s6: it was fitted non-deterministically at 2 seeds and its feature matrix has
+been overwritten, so it is the one submission that cannot satisfy rulebook 8.2.
+
+**Final: 0.52708 → 0.55203 across ten submissions, +0.02495.** Roughly 58% of
+that is the Stage 0/1 feature and validation rebuild, 24% the integrity feature,
+and 8% the blend weighting — with the remainder spread across the decorrelated
+CatBoost member and seed/determinism changes.
 
 ---
 

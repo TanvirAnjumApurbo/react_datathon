@@ -17,6 +17,11 @@ here exists only to confirm the split behaves and to rank the feature blocks.
 | 3 (2026-09-07) | + 8 recency/window variants (13 members) | 0.5530 | +0.0023 | 0.53901 | **−0.0025** |
 | 4 (2026-09-07) | submission 2 + `signup_inconsistency_d` | ~+0.025 | +0.025 | **0.54874** | **+0.0072** |
 | 5 (2026-09-07) | submission 4 + `cat_base` | — | +0.0011 | **0.55014** | **+0.0014** |
+| 6 (2026-09-07) | submission 5 rebuilt deterministically, 3 seeds, pinned rounds | 0.5519 | ~0 | 0.54995 | **−0.00019** |
+| 7 (2026-09-07) | same members, equal weight per *family* (CatBoost at ½) | 0.5526 | +0.0007 | **0.55150** | **+0.00155** |
+| 8 (2026-09-07) | s7 with `signup_inconsistency_d` removed | 0.5511 | — | 0.54548 | −0.00602 |
+| 9 (2026-09-07) | CatBoost weight 0.50 → 0.65 | 0.5448 | +0.0001 | **0.55187** | +0.00037 |
+| 10 (2026-09-07) | CatBoost weight 0.65 → 0.80 | 0.5445 | −0.0003 | **0.55203** | +0.00016 |
 
 Submission 1's gap was understood and was not a leak: the fraud amount signature
 decays across the stream (fraud median 4,918 BDT in January, 944 in mid-July,
@@ -637,6 +642,86 @@ rows only "in a strictly-past-only way". There is no fraud-ring signal being
 recovered here; there is only the future. **No post-processing is adopted**, and
 `blend.py` now refuses to adopt any non-causal variant regardless of its score.
 
+## Stage 4 — the far horizon, and four members that did not earn a place
+
+`tune.py --far` now covers every candidate, so all 20 members carry three reads
+over the *same* 67k rows: `tail_recent` (1–17 days ahead), `tail_late` (46–62)
+and `tail_far` (75–91). The real test window spans 1–62 days past its cutoff and
+then keeps drifting for two more months of calendar time, so it sits between the
+last two.
+
+### The horizon reorders the members
+
+| member | tail_recent | tail_late | tail_far | decay |
+|---|---|---|---|---|
+| `cat_base` | 0.5608 | **0.5516** | **0.5328** | 0.0188 |
+| `lgb_extra` | 0.5590 | 0.5475 | **0.5347** | **0.0128** |
+| `lgb_shallow` | 0.5601 | 0.5524 | 0.5320 | 0.0204 |
+| `lgb_base` | 0.5600 | 0.5491 | 0.5320 | 0.0169 |
+| `xgb_base` | **0.5625** | 0.5481 | 0.5305 | 0.0176 |
+| `lgb_deep` | 0.5616 | 0.5509 | 0.5299 | 0.0210 |
+
+`lgb_extra` is 7th of 8 at `tail_late` and first at `tail_far`; `lgb_deep` is
+second at `tail_recent` and last at `tail_far`. Reading one horizon is not
+merely noisier than reading three — it answers a different question than the
+private half of the test set asks.
+
+**Blend decay rises with member count**, which gives submission 3's leaderboard
+loss a mechanism: `equal_core` (5 members) decays 0.0169, `equal_lgb_all` (13)
+decays 0.0197 while scoring *higher* at `tail_late`, and `equal_all` (20) has
+the worst far read of any composition. Extra members buy near-horizon AP and pay
+for it in the regime that decides the private 40%.
+
+### Four members proposed with mechanisms; three refuted
+
+Each was specified before measurement and judged on a four-part gate: mechanism,
+decorrelation (rank ρ ≤ 0.70 against the blend), competence (within 0.010 of the
+core at `tail_late`), and horizon (decay no worse than the core's).
+
+| member | ρ | tail_late | tail_far | decay | verdict |
+|---|---|---|---|---|---|
+| `lgb_durable` (no `amount`) | 0.777 | 0.5397 | 0.5197 | 0.0200 | refuted |
+| `cat_durable` | 0.632 | 0.5385 | 0.5143 | 0.0242 | refuted |
+| `lgb_linear` (`linear_tree`) | 0.572 | 0.5484 | **0.5016** | 0.0468 | refuted |
+| `lgb_sub30` (`feature_fraction=0.3`) | 0.829 | 0.5483 | 0.5331 | 0.0152 | clone |
+
+**Standalone feature retention does not predict model behaviour.**
+`lgb_durable` was built because the amount family keeps only 0.61–0.64 of its
+power across the regime split while `cust_dt` keeps 0.89 and `gnn_cd_cos` 0.99 —
+so a model denied that block should decay more slowly. It decays *faster*
+(0.0200 vs 0.0169) and is 0.0094 worse at `tail_late`. `cat_durable` inherits
+the same weakness through a different algorithm, so it is the feature view and
+not the learner.
+
+**`lgb_linear` is why `tail_far` exists.** It ties the core on the selection
+target, clears the decorrelation gate at ρ 0.572, and has a documented
+mechanism — it would have passed every check this project had. At 75–91 days it
+collapses to 0.5016, a decay nearly 3× anything else measured. Linear leaves
+extrapolate as linear functions and diverge once the unbounded counters leave
+their training range. (It also stopped at 60 rounds, so under-training competes
+as an explanation; it fails either way.)
+
+**Decorrelation and competence trade off.** The two most independent members in
+the project (`lgb_linear` 0.572, `cat_durable` 0.632) are exactly the two that
+fall apart at the far horizon, and the one that matches the core at every
+horizon is a clone at 0.829. `cat_base` — ρ 0.624 *and* competitive everywhere —
+is the only exception, which is why it is the one member that ever paid.
+`xgb_base` sits at ρ 0.824, inside the LightGBM clone band: **a different
+library is not automatically a different model.**
+
+### `mean(tail_late, tail_far)` is a better estimator and still not a discriminator
+
+| composition | tail_late | mean(late,far) | board | err(late) | err(mean) |
+|---|---|---|---|---|---|
+| `equal_core` (= s2) | 0.5511 | 0.5427 | 0.5415 | +0.0096 | **+0.0012** |
+| `equal_lgb_all` (= s3) | 0.5532 | 0.5433 | 0.5390 | +0.0141 | **+0.0043** |
+
+Eight times closer on the *level*, and still wrong on the *difference*: the
+board puts s2 above s3 by 0.0025 and the mean puts s3 above s2 by 0.0007. So the
+0.008 resolution limit is not an artefact of a poorly-centred statistic. 1,068
+positives cannot separate models 0.0025 apart, whatever functional is computed
+from them. `horizon_proxy.py` runs this test and prints the verdict.
+
 ## The three rules the design is built around
 
 1. **Strictly past-only.** Every feature for a transaction at time *t* uses only
@@ -685,7 +770,12 @@ train_check.py           walk-forward feature validation harness
 baseline.py              raw-column reference AP -- the denominator
 adversarial_validation.py  train-vs-test drift: AUC, PSI, KS, drop shortlist
 ablate.py                does a change help on the tail? paired-bootstrap verdicts
-notebooks/               thin Kaggle-ready wrapper
+tune.py                  does a change to the *fitting procedure* help
+blend.py                 weights + post-processing, with the decorrelation table
+horizon_proxy.py         which local statistic predicts the board? fits nothing
+submit.py                refit on all labelled data, write submissions/<name>.{csv,json}
+make_notebook.py         emit the rulebook-8.2 reproducibility notebook
+notebooks/               generated per-submission reproduction notebooks
 ```
 
 ## How past-only is enforced
@@ -725,13 +815,53 @@ individually near-perfect (>0.85 AP is a leak, not a discovery — the best hone
 one is `amt_ratio_median` at 0.44); train/test boundary continuity; history
 features null on an entity's first-ever row.
 
-### Run-to-run variation
+### The dominant run-to-run variance source is the feature build, not the model
+
+This was measured wrong at first, and the correction matters. `lgb_deep`
+early-stopped at **230 rounds** on one day and **758** on the next — same code,
+same data, same params, same disjoint stopping window — for a `tail_late` change
+of 0.0011. The natural reading is LightGBM's thread non-determinism. It is not:
+`lgb_base` reproduced to four decimals across three separate processes in one
+session. What changed between the two days was that the feature cache had been
+rebuilt.
+
+| `gnn_*` column | bit-identical across builds | max abs diff | correlation |
+|---|---|---|---|
+| `gnn_cd_score` | no | 3.2e-04 | 1.000000 |
+| `gnn_cd_cos` | no | 1.5e-05 | 1.000000 |
+| `gnn_cm_cos` | no | 1.0e-05 | 1.000000 |
+| `gnn_cust_emb_drift` | no | 3.0e-06 | 1.000000 |
+
+`gnn.py` is properly seeded (`torch.manual_seed`, seeded generators, a seeded
+state initialiser); this is float non-determinism in multi-threaded CPU
+reductions. **A 3e-4 perturbation of four columns out of 244 moves an early stop
+by 3×**, which says the average-precision stopping curve here is a plateau
+rather than a peak.
+
+Three consequences:
+
+- **Round counts must be pinned, not re-derived.** `submit.py --rounds-book`
+  takes the book a submission was built from; naming the same members does not
+  identify the same model.
+- **Reproducing a submission needs the matrix, not just the code.** A rerun
+  ranks the test set essentially identically (feature correlation 1.000000) and
+  scores within the noise floor, but the CSV is not byte-identical unless the
+  built matrix is shipped alongside the notebook.
+- **A paired-bootstrap verdict is not stable across a rebuild.** `lgb_shallow`
+  measured −0.0007 against `lgb_base` on one build and **+0.0032, verdict
+  `BETTER`, interval excluding zero** on the next. The verdict machinery
+  promoted a candidate on early-stopping churn alone — the sharpest evidence yet
+  that sub-0.008 deltas are not results.
+
+### Run-to-run variation within a single feature build
 
 LightGBM is seeded (`seed`, `bagging_seed`, `feature_fraction_seed`) but runs
 with `num_threads=0` and without `deterministic=True`, so histogram accumulation
-order varies between threads and tiny float differences compound over 1,600
-boosting rounds. Two runs of identical code on identical data are therefore not
-bit-identical.
+order can vary between threads and tiny float differences compound over 1,600
+boosting rounds. The measurement below was taken across two runs that also
+differed in their feature matrix, so it conflates the two sources and should be
+read as an upper bound on the model's own contribution; within one build,
+LightGBM has reproduced exactly here.
 
 It does not matter for the metric, because the churn sits where the metric does
 not look. Comparing two such runs on the 252,193 rows whose features were
@@ -813,7 +943,7 @@ fraud work "this account's stated age contradicts its own history" is a genuine
 identity-tampering signal.
 
 In *this* dataset it is near-deterministic: rows where it is non-zero are 85.8%
-fraud (48.7× lift), covering ~7.5% of all fraud, while essentially no legitimate
+fraud (48.7× lift), covering 6.8% of all fraud, while essentially no legitimate
 row shows any inconsistency. That is a fingerprint of how the fraud rows were
 synthesised, not behaviour a model is meant to learn — and the rules say
 *"reverse-engineering the generative assumptions is not the intended path to a
@@ -824,11 +954,28 @@ So this is a judgement call about the spirit of the rules, left explicit and
 switchable rather than buried:
 
 ```python
-# src/config.py
-USE_SIGNUP_INCONSISTENCY = False   # default
+# src/config.py -- default off, resolved from the environment at import time
+USE_SIGNUP_INCONSISTENCY = os.environ.get("REACT_SIGNUP", "").strip().lower() in {
+    "1", "true", "yes"
+}
 ```
 
-It is worth roughly **+0.025 AP** (mean 0.790 with it, 0.765 without).
+```bash
+REACT_SIGNUP=1 .venv/Scripts/python.exe -u submit.py --name with_signup ...
+```
+
+The environment override exists because the earlier arrangement — a literal in
+tracked source, flipped to `True` for a build and back afterwards — left the repo
+on the wrong value twice when a build process was killed before it could restore
+it. A build flag that requires mutating tracked source is a flag that will
+eventually be left in the wrong state. The resolved value is folded into
+`harness.feature_source_hash`, so the feature cache invalidates correctly either
+way, and the generated reproduction notebook sets the variable from the
+submission's own manifest so it cannot be run in a configuration that differs
+from the one it claims to reproduce.
+
+It is worth roughly **+0.025 AP** locally, and **+0.0072 measured on the
+leaderboard** (submission 4 against submission 2, one variable changed).
 
 ## References
 

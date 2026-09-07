@@ -1,0 +1,50 @@
+{
+  "name": "s8_clean_line",
+  "note": "s7's exact composition and weights on the 243-column clean matrix. Same members, same family-equal weights, same pinned round book, 3 seeds, deterministic -- the single variable is signup_inconsistency_d. Spent to price the integrity feature at the FINAL composition (submissions 4 vs 2 measured +0.0072, but on the older member-equal 5-member blend) and to hold a clean-line candidate ready if the feature is questioned at reproducibility review.",
+  "spec": "inline",
+  "weights": {
+    "lgb_base": 0.1,
+    "lgb_deep": 0.1,
+    "lgb_shallow": 0.1,
+    "lgb_reg": 0.1,
+    "lgb_extra": 0.1,
+    "cat_base": 0.5
+  },
+  "seeds": 3,
+  "postprocess": null,
+  "members": [
+    "cat_base_s0",
+    "cat_base_s1",
+    "cat_base_s2",
+    "lgb_base_s0",
+    "lgb_base_s1",
+    "lgb_base_s2",
+    "lgb_deep_s0",
+    "lgb_deep_s1",
+    "lgb_deep_s2",
+    "lgb_shallow_s0",
+    "lgb_shallow_s1",
+    "lgb_shallow_s2",
+    "lgb_reg_s0",
+    "lgb_reg_s1",
+    "lgb_reg_s2",
+    "lgb_extra_s0",
+    "lgb_extra_s1",
+    "lgb_extra_s2"
+  ],
+  "local": {},
+  "n_features": 243,
+  "te_feedback_delay_d": 7.0,
+  "use_signup_inconsistency": false,
+  "deterministic": true,
+  "rounds_book": "G:\\REACT_datathon\\data\\processed\\tune_rounds.s5_asbuilt.json",
+  "rounds": {
+    "lgb_base": 203,
+    "lgb_deep": 230,
+    "lgb_shallow": 494,
+    "lgb_reg": 404,
+    "lgb_extra": 482,
+    "cat_base": 855
+  },
+  "feature_source_hash": "7d81054ccf774ff7"
+}

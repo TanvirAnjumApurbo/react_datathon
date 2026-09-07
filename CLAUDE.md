@@ -11,6 +11,25 @@ precision**. Competition rules are in `kaggle_description.md` and
 `SUBMISSIONS.md` is the running decision log of what each leaderboard
 submission was spent to learn.
 
+## Environment overrides
+
+Three settings are read from the environment so a run can be reconfigured
+without editing tracked source. Defaults reproduce the local layout exactly.
+
+```bash
+REACT_SIGNUP=1        # enable the integrity feature for one build (default off)
+REACT_DATA=<dir>      # where train.csv / test.csv / sample_submission.csv live
+REACT_PROCESSED=<dir> # where the pipeline writes caches and results
+```
+
+`REACT_SIGNUP` exists because rewriting the literal in `src/config.py` and
+restoring it afterwards left the repo on the wrong value twice when a build was
+killed mid-run. `REACT_DATA` / `REACT_PROCESSED` exist for the reproducibility
+notebook: on Kaggle the repository is mounted **read-only** under
+`/kaggle/input`, the competition CSVs sit in a different input directory again,
+and `/kaggle/working` is the only writable path -- so a hard-coded
+`ROOT / "data"` fails at import, before anything can be verified.
+
 ## Interpreter
 
 **Always use `.venv/Scripts/python.exe`.** Bare `python` on PATH resolves to
@@ -47,17 +66,33 @@ scipy/sklearn; 3.12 has scipy/sklearn but no pandas).
 .venv/Scripts/python.exe -u tune.py --set params          # ~10 min, 5 LightGBM configs
 .venv/Scripts/python.exe -u tune.py --set drift --far     # recency + window truncation
 .venv/Scripts/python.exe -u tune.py --set family          # XGBoost / CatBoost
+.venv/Scripts/python.exe -u tune.py --set diverse --far   # members proposed for decorrelation
 .venv/Scripts/python.exe -u tune.py --set all
+
+# Which local statistic actually predicts the board? Fits nothing; needs --far
+# to have been run over every member first.
+.venv/Scripts/python.exe -u horizon_proxy.py
 
 # Stage 3: pick weights and post-processing from the persisted tail predictions.
 # Fits nothing; seconds.
 .venv/Scripts/python.exe -u blend.py
 
 # Refit on all labelled data and write submissions/<name>.csv + .json.
+# REACT_SIGNUP=1 enables the integrity feature for one build without editing config.
 # Members are cached per (member, seeds, determinism, feature hash), so a second
 # blend built from the same members costs seconds rather than another refit.
 .venv/Scripts/python.exe -u submit.py --name s2_pipeline --seeds 2 --note "..."
 .venv/Scripts/python.exe -u submit.py --name final --seeds 3 --deterministic
+# Reproduce an earlier submission: pin the round book it was built from, because
+# tune.py's early stopping is not stable across feature rebuilds.
+.venv/Scripts/python.exe -u submit.py --name redo --seeds 3 --deterministic \
+    --rounds-book tune_rounds.s5_asbuilt.json --weights '{"cat_base": 1.0}'
+
+# Generate the rulebook-8.2 reproducibility notebook for a written submission.
+# Reads submissions/<name>.json, so it names the exact members, weights, round
+# counts and feature hash that produced the upload rather than a description of
+# them, and ends by diffing its own output against the uploaded CSV.
+.venv/Scripts/python.exe make_notebook.py --name s6_det_s5comp
 
 # Superseded by tune.py/blend.py/submit.py, kept for the older numbers.
 .venv/Scripts/python.exe -u train_model.py --stage all
@@ -195,12 +230,26 @@ honest pass/fail.
 every entry records the question the submission was spent to answer, not just
 its score. Update it after each result.
 
-**The noise floor is ~0.003 AP.** LightGBM runs with `num_threads=0` and without
-`deterministic=True`, so two runs of identical code on identical data are not
-bit-identical: top-500 overlap 98.4%, top-1% Spearman 0.9989, bottom-90%
-Spearman 0.9595. Average precision only reads the head of the ranking, so this
-is harmless for scoring — but it means a small leaderboard delta is not
-evidence, and a change too small to clear that floor is not worth a submission.
+**The noise floor is not one number — it depends on what varied.** Measured on
+the board, not assumed:
+
+| what changed | board delta | source |
+|---|---|---|
+| seeds 2→3 + `deterministic=True`, same matrix, pinned rounds | **0.00019** | s5 → s6 |
+| the blend weight vector only | **+0.00155** | s6 → s7 |
+| feature matrix rebuilt (GNN float churn) | ~0.002, and round counts move 3× | `lgb_deep` 230 → 758 rounds |
+
+The old blanket "~0.003" came from a comparison that *also* rebuilt the
+features, so it conflated the model's variance with the matrix's. Hold the
+matrix fixed and the board resolves differences an order of magnitude smaller
+than this repo has been treating as unresolvable — which is what made the
+weighting result (+0.00155, ~8× the measured floor) readable rather than noise.
+
+Two rules survive intact. **The local tail still cannot resolve below ~0.008**
+regardless of how precise the board is — that limit is about 1,068 positives,
+not about determinism. And a *small* board delta between two genuinely different
+candidates is still weak evidence, because selecting the max-public of several
+near-identical files imports the public set's luck into the choice.
 
 ## Architecture
 
@@ -383,12 +432,70 @@ leaderboard.
 
 ## Integrity flag
 
-`config.USE_SIGNUP_INCONSISTENCY` (default `False`). The feature is past-only
+`config.USE_SIGNUP_INCONSISTENCY` (default `False`, set with `REACT_SIGNUP=1` in
+the environment — **do not** edit the literal in `src/config.py`; a killed
+process left the repo on the wrong value twice when builds worked that way). The
+feature is past-only
 and not target leakage, but in this dataset it is 85.8% precise — a fingerprint
 of how fraud rows were synthesised rather than behaviour. The rules say
 reverse-engineering the generative assumptions "is not the intended path", and
 top-15 teams face reproducibility review. Worth ~+0.025 AP. Do not flip it
 without asking the user; the reasoning is documented in `README.md`.
+
+**The feature build is not bit-reproducible, and that is the dominant source of
+run-to-run variation — not LightGBM.** `lgb_deep` early-stopped at 230 rounds on
+one day and 758 on the next, same code and data, for a `tail_late` change of
+0.0011. `lgb_base` meanwhile reproduced to four decimals across three separate
+processes in one session. The cause is `gnn.py`: it is correctly seeded, but
+multi-threaded CPU reductions in torch are not deterministic, so the four
+`gnn_*` columns rebuild to ~3e-4 (correlation 1.000000) rather than exactly.
+That is enough to move an early stop by 3×, which means the AP stopping curve is
+a plateau, not a peak. Three rules follow:
+
+- **Pin round counts when reproducing a submission.** `submit.py --rounds-book`
+  takes the book it was built from; `tune_rounds.s5_asbuilt.json` holds the
+  counts behind 0.55014. Naming the same members does *not* identify the same
+  model.
+- **Ship the matrix, not just the code.** A rerun ranks the test set essentially
+  identically and scores within the noise floor, but the CSV is byte-identical
+  only if the built matrix travels with the notebook.
+  `data/processed/base_features.signup.parquet` preserves the 244-column build.
+- **A paired-bootstrap verdict does not survive a rebuild.** `lgb_shallow` read
+  −0.0007 against `lgb_base` on one build and +0.0032 / `BETTER` / interval
+  excluding zero on the next. The verdict machinery will promote a candidate on
+  early-stopping churn alone.
+
+**Add ensemble members for decorrelation, and measure it with rank ρ — not
+family labels and not head overlap.** Calibrated against the two board results:
+`cat_base` entered at ρ 0.624 and gained +0.0014; eight recency/window variants
+entered at ρ 0.736–0.826 and cost 0.0025; core members sit at 0.840–0.915 among
+themselves. Top-1% overlap does *not* separate the winner from the losers (0.934
+vs 0.931) while ρ does, cleanly. `xgb_base` sits at ρ 0.824 — inside the clone
+band — so a different library is not automatically a different model.
+`blend.py` prints this table.
+
+**Decorrelation and competence trade off on this data.** The two most
+independent members ever built here (`lgb_linear` ρ 0.572, `cat_durable` 0.632)
+are exactly the two that collapse at `tail_far`; the one that matches the core
+at every horizon (`lgb_sub30`) is a clone at 0.829. `cat_base` is the only
+member that is both, which is why it is the only addition that ever paid. Do not
+assume a replacement can be found by trying more variants — four were tried with
+stated mechanisms and all four failed.
+
+**Score `tail_far` before adopting anything.** `lgb_linear` ties the core on the
+selection target, clears the ρ gate, and has a documented mechanism — it would
+have passed every check that existed before. At 75–91 days it collapses from
+0.5484 to 0.5016. Blend decay also rises with member count (0.0169 at 5 members,
+0.0197 at 13, 0.0190 at 20), which is the mechanism behind submission 3's board
+loss: extra members buy near-horizon AP and pay for it in the regime the private
+40% sits in.
+
+**`mean(tail_late, tail_far)` is a better level estimator and still cannot
+discriminate.** Board-vs-local error falls from +0.0096/+0.0141 to
++0.0012/+0.0043, but it still gets the s2-vs-s3 ordering wrong. The 0.008
+resolution limit is therefore not an artefact of a badly-centred statistic —
+1,068 positives cannot resolve 0.0025 whatever functional is computed from them.
+`horizon_proxy.py` runs the test.
 
 ## Caching
 

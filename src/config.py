@@ -6,6 +6,7 @@ columns that are *forbidden* from ever reaching the model matrix.
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import numpy as np
@@ -15,11 +16,22 @@ import pandas as pd
 # Paths
 # --------------------------------------------------------------------------
 ROOT = Path(__file__).resolve().parents[1]
-DATA = ROOT / "data"
+
+# Both roots are overridable from the environment, and the defaults reproduce
+# the local layout exactly. This exists for the reproducibility notebook: on
+# Kaggle the repository is mounted read-only under /kaggle/input, the
+# competition CSVs live in a *different* input directory again, and the only
+# writable location is /kaggle/working -- so a hard-coded `ROOT / "data"` makes
+# the pipeline fail at import time, before any of it can be verified.
+#
+#   REACT_DATA=/kaggle/input/react-2026        raw train.csv / test.csv / sample
+#   REACT_PROCESSED=/kaggle/working/processed  anything this pipeline writes
+DATA = Path(os.environ.get("REACT_DATA") or (ROOT / "data"))
+PROCESSED = Path(os.environ.get("REACT_PROCESSED") or (DATA / "processed"))
+
 RAW_TRAIN = DATA / "train.csv"
 RAW_TEST = DATA / "test.csv"
 SAMPLE_SUB = DATA / "sample_submission.csv"
-PROCESSED = DATA / "processed"
 GRAPH_CACHE = PROCESSED / "graph"
 
 for _d in (PROCESSED, GRAPH_CACHE):
@@ -274,11 +286,14 @@ FLOAT_DTYPE = np.float32
 # stated age contradicts its own history" is a genuine identity-tampering
 # signal.
 #
-# In THIS dataset, however, it is near-deterministic: rows where it is non-zero
-# are 99.1-100% fraud (56x lift) and it covers ~7.5% of all fraud, while only
-# 0.001% of legitimate rows show any inconsistency at all. That pattern is a
-# fingerprint of how the fraud rows were synthesised, not behaviour the model
-# is meant to learn. The rules say:
+# In THIS dataset, however, it is unusually sharp. Measured on the 731,942
+# labelled rows: 1,014 rows (0.139%) are non-zero, and 85.80% of those are fraud
+# -- 48.7x lift -- covering 6.75% of all fraud, while only 0.020% of legitimate
+# rows show any inconsistency. (An earlier version of this comment claimed
+# "99.1-100% fraud, 56x lift, 0.001% of legitimate rows"; those numbers were
+# never reproducible and are corrected here against a direct measurement.)
+# The pattern is a fingerprint of how the fraud rows were synthesised, not
+# behaviour the model is meant to learn. The rules say:
 #
 #   "Reverse-engineering the generative assumptions is not the intended path to
 #    a good score; understanding behavior, generally, is."
@@ -287,4 +302,14 @@ FLOAT_DTYPE = np.float32
 # It is not target leakage -- it uses only raw non-target columns, past-only --
 # so this is a judgement call about the spirit of the rules, left explicit and
 # switchable rather than buried. Default off.
-USE_SIGNUP_INCONSISTENCY = False
+#
+# Default off, and overridable from the environment rather than by editing this
+# line: `REACT_SIGNUP=1 python submit.py ...`. Submissions 4-7 were built by
+# rewriting this literal to True and back, and twice a killed process left the
+# repo sitting on the wrong value -- a build flag that requires mutating tracked
+# source is a flag that will eventually be left in the wrong state. The resolved
+# value is folded into `harness.feature_source_hash`, so the feature cache still
+# invalidates correctly whichever way it is set.
+USE_SIGNUP_INCONSISTENCY = os.environ.get("REACT_SIGNUP", "").strip().lower() in {
+    "1", "true", "yes"
+}

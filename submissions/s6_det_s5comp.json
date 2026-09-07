@@ -1,0 +1,50 @@
+{
+  "name": "s6_det_s5comp",
+  "note": "Submission 5's composition rebuilt deterministically at 3 seeds, pinned to the as-built round book. Spent on reproducibility, not score: s5 was fitted with deterministic=False at 2 seeds and its feature matrix has since been overwritten, so it cannot be reproduced from a notebook and rulebook 8.2 forfeits a position that cannot be. Expected board delta ~0; a large move would instead be evidence that the run-to-run floor is wider than 0.003.",
+  "spec": "inline",
+  "weights": {
+    "lgb_base": 1,
+    "lgb_deep": 1,
+    "lgb_shallow": 1,
+    "lgb_reg": 1,
+    "lgb_extra": 1,
+    "cat_base": 1
+  },
+  "seeds": 3,
+  "postprocess": null,
+  "members": [
+    "lgb_base_s0",
+    "lgb_base_s1",
+    "lgb_base_s2",
+    "lgb_deep_s0",
+    "lgb_deep_s1",
+    "lgb_deep_s2",
+    "lgb_shallow_s0",
+    "lgb_shallow_s1",
+    "lgb_shallow_s2",
+    "lgb_reg_s0",
+    "lgb_reg_s1",
+    "lgb_reg_s2",
+    "lgb_extra_s0",
+    "lgb_extra_s1",
+    "lgb_extra_s2",
+    "cat_base_s0",
+    "cat_base_s1",
+    "cat_base_s2"
+  ],
+  "local": {},
+  "n_features": 244,
+  "te_feedback_delay_d": 7.0,
+  "use_signup_inconsistency": true,
+  "deterministic": true,
+  "rounds_book": "G:\\REACT_datathon\\data\\processed\\tune_rounds.s5_asbuilt.json",
+  "rounds": {
+    "lgb_base": 203,
+    "lgb_deep": 230,
+    "lgb_shallow": 494,
+    "lgb_reg": 404,
+    "lgb_extra": 482,
+    "cat_base": 855
+  },
+  "feature_source_hash": "a8b8548dca8f2a13"
+}
