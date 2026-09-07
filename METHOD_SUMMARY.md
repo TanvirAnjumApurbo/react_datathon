@@ -68,9 +68,22 @@ past-only guarantee lives in one place rather than being re-argued per feature.
 no banned columns or duplicates; no single feature individually near-perfect;
 a customer's first-ever row has no history features; train/test boundary
 continuity; and the decisive one — **truncation invariance**, which rebuilds the
-whole pipeline on a stream cut at a cutoff and diffs it against full-stream
-values on the shared rows. If any feature at time *t* used information after *t*,
-deleting the future would change it.
+features on a stream cut at a cutoff and diffs them against full-stream values on
+the shared rows. If any feature at time *t* used information after *t*, deleting
+the future would change it. It covers the 202 behavioural columns (temporal,
+amount, velocity, entity, behaviour).
+
+The 29 graph columns are audited differently and we state that rather than let it
+pass unnoticed. Their construction is past-only — each weekly snapshot is built
+from strictly earlier rows and joined onto the following week — but about a third
+of them are expressed in a basis (a truncated SVD, and a self-supervised
+embedding) whose orientation depends on the entity index taken from the whole
+stream, so truncation moves them without any row depending on its own future. The
+row-wise test also cannot settle the question, because the block is not
+bit-reproducible against itself: two builds of the identical stream differ by up
+to 3e-4 against a test tolerance of 1e-5. The block carries no labels and earns
+nothing — dropping all 29 columns moves our selection window by +0.0020, i.e.
+slightly up — so no result here depends on it.
 
 The single-feature scan is worth quoting, because it is measured on the full
 244-column matrix actually submitted — including the disclosed integrity feature

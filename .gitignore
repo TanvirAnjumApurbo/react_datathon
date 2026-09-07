@@ -46,3 +46,19 @@ data/processed/*
 submissions/*.csv
 
 .aider*
+
+# Kaggle upload staging. `matrix_upload/` is the 395 MB feature matrix that makes
+# the reproducibility notebook byte-exact, and `react2026_src.zip` is a rebuildable
+# archive of tracked source -- neither belongs in the repository.
+matrix_upload/
+react2026_src.zip
+
+# Kaggle run outputs. The CSVs are ~8 MB each and are reproduced by the notebook;
+# the rendered figures are small and are kept as evidence the run executed.
+results/*.csv
+
+# LaTeX build artefacts
+report/*.aux
+report/*.log
+report/*.out
+report/build.log
